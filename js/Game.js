@@ -1,7 +1,6 @@
 
 var Game = function()
 {
-	this.jetDesc = "A jet engine is a reaction engine discharging a fast-moving jet that generates thrust by jet propulsion. This broad definition includes airbreathing jet engines (turbojets, turbofans, ramjets, and pulse jets) and non-airbreathing jet engines (such as rocket engines). In general, jet engines are combustion engines.";
 	this.keys = {};
 	this.sprites = [];
 	this.slotBg = [];
@@ -10,18 +9,21 @@ var Game = function()
 	this.textPartDesc;
 	this.textPartName;
 
+	this.background = null;
+
 	this.previewIndex = 0;
 	this.previewSprite = null;
+	this.previewSize = 100;
 
 	this.parts = ['fan', 'propeller', 'compressor', 'combustor', 'turbine', 'nozzle', 'afterburner'];
-	this.partscale = [0.2, 0.3, 0.16, 0.10, 0.16, 0.15, 0.18];
+	this.partscale = [0.14, 0.3, 0.16, 0.10, 0.16, 0.15, 0.15];
 	this.slots = [null, null, null, null, null];
 
 	this.positions = [];
-	this.slot_width = [60, 80, 80, 80, 80];
-	this.slot_height = [85+30, 85, 85, 85, 85, 85-30];
+	this.slot_width = [56, 80, 80, 80, 80];
+	this.slot_height = [80+30, 80, 80, 80, 80, 80-30];
 	this.slot_anchor = [1.0, 0.5, 0.5, 0.5, 0.0];
-	this.scale = 1.5;
+	this.SCALE = 1.5;
 };
 
 Game.prototype =
@@ -49,7 +51,7 @@ Game.prototype =
 		this.textPartDesc.y = box[1] + padding + sep;
 		this.textPartDesc.maxWidth = box[2] - 2*padding - sep;
 
-		var startLeft = WIDTH * 1/16;
+		var startLeft = WIDTH * 1/12;
 		var startTop = HEIGHT/2;
 		var width = this.slot_width.reduce((a, b) => a + b, 0);
 
@@ -58,15 +60,25 @@ Game.prototype =
 		for ( var i = 0; i < this.slots.length; i++ )
 		{
 			this.positions.push( [left, top] );
-			left += this.scale * this.slot_width[i];
+			left += this.SCALE * this.slot_width[i];
 		}
+
+
+		var x = startLeft + this.SCALE * (width/2 + this.slot_width[0]/5);
+		var y = startTop;
+		var scale = 0.48;
+		this.background = game.add.sprite( x, y, 'bg' );
+		this.background.anchor.set( 0.5, 0.5 );
+		this.background.scale.set( this.SCALE * scale );
+		this.background.alpha = 1.0;
+
 
 		var thick = 15;
 		var bar = game.add.graphics();
 		bar.beginFill( 0x333333, 1.0 );
-		var barLeft = startLeft + this.scale * this.slot_width[0]/2;
-		var barWidth = width - this.slot_width[0]/2 - this.slot_width[this.slots.length-1] - this.slot_width[this.slots.length-2]/2;
-		bar.drawRect( barLeft, startTop - thick/2, this.scale * barWidth, thick );
+		var barLeft = startLeft + this.SCALE * ( this.slot_width[0]/2 - 5 );
+		var barWidth = width - this.slot_width[0]/2 - this.slot_width[this.slots.length-1];
+		bar.drawRect( barLeft, startTop - thick/2, this.SCALE * barWidth, thick );
 		bar.endFill();
 
 
@@ -76,14 +88,14 @@ Game.prototype =
 
 			var box = game.add.graphics();
 			this.slotBg.push( box );
-			box.beginFill( 0x000000, 0.1 );
-			var padding = 5;
+			box.beginFill( 0x001133, 0.2 );
+			var padding = 10;
 			var left = p[0]+padding;
-			var w = this.slot_width[i]*this.scale-2*padding;
-			var topL = p[1]+padding - this.slot_height[i]/2*this.scale;
-			var hL = this.slot_height[i+1]*this.scale-2*padding;
-			var topR = p[1]+padding - this.slot_height[i+1]/2*this.scale;
-			var hR = this.slot_height[i]*this.scale-2*padding;
+			var w = this.slot_width[i]*this.SCALE-2*padding;
+			var topL = p[1]+padding - this.slot_height[i]/2*this.SCALE;
+			var hL = this.slot_height[i+1]*this.SCALE-2*padding;
+			var topR = p[1]+padding - this.slot_height[i+1]/2*this.SCALE;
+			var hR = this.slot_height[i]*this.SCALE-2*padding;
 			var poly = new Phaser.Polygon([
 				new Phaser.Point( left, topL ),
 				new Phaser.Point( left + w, topR ),
@@ -100,36 +112,35 @@ Game.prototype =
 			s.texture.frame.height = hR;
 			s.anchor.set( -left/w, -topL/hR );
 			s.inputEnabled = true;
-			s.events.onInputDown.add( function() {
-				this.remove( this.slots[this.index] );
-				this.setAtPosition( this.index, this.previewIndex );
+			s.events.onInputDown.add( function(sprite) {
+				this.game.remove( this.game.slots[sprite.index] );
+				this.game.setAtPosition( sprite.index, this.game.previewIndex );
 				//game.add.tween(this).to({
 				//	alpha: 0.8,
 				//}, 200, Phaser.Easing.Exponential.Out, true, 0, 0, true);
-			}, s);
+			}, {game: this, sprite: s});
 		}
 
 
-		var size = 100;
-		var preview = game.add.sprite( WIDTH - size, HEIGHT - size, null );
+		var preview = game.add.sprite( WIDTH - this.previewSize, HEIGHT - this.previewSize, null );
 
 		var box = game.add.graphics();
 		box.beginFill( 0xffff00, 0.5 );
-		//box.drawRect( 0, 0, size, size );
-		box.drawCircle( size/2, size/2, size );
+		//box.drawRect( 0, 0, this.previewSize, this.previewSize );
+		box.drawCircle( this.previewSize/2, this.previewSize/2, this.previewSize );
 		box.endFill();
 		preview.addChild( box );
 
-		this.previewSprite = game.add.sprite( size/2, size/2, this.parts[this.previewIndex], 0 );
+		this.previewSprite = game.add.sprite( this.previewSize/2, this.previewSize/2, this.parts[this.previewIndex], 0 );
 		this.previewSprite.anchor.set( 0.5, 0.5 );
-		this.previewSprite.scale.set( size / game.cache.getImage( this.parts[this.previewIndex] ).height );
+		this.previewSprite.scale.set( this.previewSize / game.cache.getImage( this.parts[this.previewIndex] ).height );
 		preview.addChild( this.previewSprite );
 
 		preview.inputEnabled = true;
 		preview.events.onInputDown.add( function() {
 			this.previewIndex = (this.previewIndex + 1) % this.parts.length;
 			this.previewSprite.loadTexture( this.parts[this.previewIndex], 0 );
-			this.previewSprite.scale.set( size / game.cache.getImage( this.parts[this.previewIndex] ).height );
+			this.previewSprite.scale.set( this.previewSize / game.cache.getImage( this.parts[this.previewIndex] ).height );
 		}, this);
 
 
@@ -140,7 +151,7 @@ Game.prototype =
 		{
 			var s = game.add.sprite( 0, 0, this.parts[i], 0 );
 			this.sprites.push( s );
-			s.scale.set( this.partscale[i] * this.scale );
+			s.scale.set( this.partscale[i] * this.SCALE );
 
 			s.animations.add( 'run', [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18], 20, true );
 			s.animations.play( 'run' );
@@ -148,13 +159,12 @@ Game.prototype =
 			this.remove( i );
 		}
 
-		console.log(this.positions);
 		for ( var i = 0; i < this.slots.length; i++ )
 		{
 			var p = this.positions[i];
 
 			var style = { font: "bold 32px Helvetica", fill: "#e54", boundsAlignH: "center", boundsAlignV: "middle" };
-			var t = game.add.text( p[0], p[1] - this.slot_height[i]/2*this.scale, i+1, style );
+			var t = game.add.text( p[0], p[1] - this.slot_height[i]/2*this.SCALE, i+1, style );
 			t.setShadow( 2, 2, 'rgba(0,0,0,1)', 0 );
 		}
 
@@ -192,6 +202,13 @@ Game.prototype =
 			s.position.y = game.rnd.integerInRange( 150, HEIGHT-150 );
 			s.velocity = new Phaser.Point( 4, 0 );
 		}
+
+
+		this.setAtPosition( 0, 0 );
+		this.setAtPosition( 1, 2 );
+		this.setAtPosition( 2, 3 );
+		this.setAtPosition( 3, 4 );
+		this.setAtPosition( 4, 5 );
 	},
 
 	update: function()
@@ -262,10 +279,14 @@ Game.prototype.setAsPreview = function ( i )
 
 	this.sprites[i].tint = 0xffffff;
 	this.sprites[i].alpha = 1.0;
-	this.sprites[i].scale.set( this.partscale[i] * this.scale / 3 );
+	this.sprites[i].scale.set( this.partscale[i] * this.SCALE / 3 );
 	this.sprites[i].anchor.set( 0.0 );
-	this.sprites[i].x = 0;
-	this.sprites[i].y = this.scale / 4;
+	this.sprites[i].x = -1000;
+	this.sprites[i].y = this.SCALE / 4;
+
+	this.previewIndex = i;
+	this.previewSprite.loadTexture( this.parts[this.previewIndex], 0 );
+	this.previewSprite.scale.set( this.previewSize / game.cache.getImage( this.parts[this.previewIndex] ).height );
 }
 
 Game.prototype.remove = function ( i )
@@ -287,11 +308,14 @@ Game.prototype.setAtPosition = function ( p, s )
 		this.sprites[s].alpha = 1.0;
 	}
 
-	var padding = 10;
-	this.sprites[s].position.x = this.positions[p][0] + this.scale * ( padding + ( this.slot_width[p] - 2*padding ) * this.slot_anchor[p] );
+	var padding = 5;
+	var anchor = this.slot_anchor[p];
+	if ( parts[s] == 'propeller' )
+		anchor = 0.0;
+	this.sprites[s].position.x = this.positions[p][0] + this.SCALE * ( padding + ( this.slot_width[p] - 2*padding ) * anchor );
 	this.sprites[s].position.y = this.positions[p][1];
-	this.sprites[s].scale.set( this.partscale[s] * this.scale );
-	this.sprites[s].anchor.set( this.slot_anchor[p], 0.5 );
+	this.sprites[s].scale.set( this.partscale[s] * this.SCALE );
+	this.sprites[s].anchor.set( anchor, 0.5 );
 
 	if ( this.slots.indexOf( s ) > -1 )
 		this.slots[this.slots.indexOf( s )] = null;
