@@ -7,13 +7,16 @@ function preload()
 {
 	game.load.spritesheet( 'fan', 'images/fan_sheet.png', 212, 826 );
 	game.load.spritesheet( 'propeller', 'images/propeller_sheet.png', 73, 908 );
-	game.load.image( 'compressor', 'images/compressor.png' );
-	game.load.image( 'combustor', 'images/combustor.png' );
-	game.load.image( 'turbine', 'images/turbine.png' );
+	game.load.spritesheet( 'compressor', 'images/compressor_sheet.png', 553, 470 );
+	game.load.spritesheet( 'combustor', 'images/combustor_sheet.png', 802, 478 );
+	game.load.spritesheet( 'turbine', 'images/turbine_sheet.png', 553, 470 );
 	game.load.image( 'nozzle', 'images/nozzle.png' );
 	game.load.image( 'afterburner', 'images/afterburner.png' );
 
 	game.load.image( 'particle', 'images/particle.png' );
+
+	game.load.bitmapFont( 'Balsamiq', 'fonts/balsamiq_regular.png', 'fonts/balsamiq_regular.fnt' ); // 72
+	game.load.bitmapFont( 'BalsamiqBold', 'fonts/balsamiq_bold.png', 'fonts/balsamiq_bold.fnt' ); // 72
 }
 
 
@@ -22,18 +25,20 @@ var keys = {};
 var sprites = [];
 var slotBg = [];
 var selected = null;
-var textObj;
+var highlight = null;
+var textPartDesc;
+var textPartName;
 
 var previewIndex = 0;
 var previewSprite = null;
 
 var parts = ['fan', 'propeller', 'compressor', 'combustor', 'turbine', 'nozzle', 'afterburner'];
-var partscale = [0.2, 0.3, 1.0, 1.0, 1.0, 1.0, 1.0];
+var partscale = [0.2, 0.3, 0.16, 0.10, 0.16, 0.15, 0.18];
 var slots = [null, null, null, null, null];
 
 var positions = [];
-var slot_width = [80, 55, 55, 55, 80];
-var slot_height = [95+20, 95, 95, 95, 95, 95-20];
+var slot_width = [60, 80, 80, 80, 80];
+var slot_height = [85+30, 85, 85, 85, 85, 85-30];
 var slot_anchor = [1.0, 0.5, 0.5, 0.5, 0.0];
 var scale = 1.5;
 
@@ -43,38 +48,44 @@ function create()
 	game.stage.backgroundColor = '#ffffff';
 
 
-	var box = [WIDTH - 300 - 50, 50, 300, 400];
-	var padding = 10;
+	var box = [585, 30, WIDTH-585, 200];
 
 	var bar = game.add.graphics();
 	bar.beginFill( 0x000000, 0.2 );
 	bar.drawRect( box[0], box[1], box[2], box[3] );
 	bar.endFill();
 
-	var style = { font: "bold 16px Helvetica", fill: "#222", boundsAlignH: "center", boundsAlignV: "middle" };
-	textObj = game.add.text( 0, 0, jetDesc, style );
-	textObj.setShadow( 1, 1, 'rgba(0,0,0,0.5)', 2 );
-	textObj.setTextBounds( box[0]+padding, box[1]+padding, box[2]-2*padding, box[3]-2*padding );
-	textObj.wordWrap = true;
-	textObj.wordWrapWidth = box[2] - 2*padding;
+	var padding = 0;
+	textPartName = game.add.bitmapText( 0, 0, 'BalsamiqBold', 'Name', 32 );
+	textPartName.x = box[0] + padding;
+	textPartName.y = box[1] + padding;
 
-	var left = WIDTH * 1/16;
-	var top = HEIGHT/2;
+	var sep = 48;
+	textPartDesc = game.add.bitmapText( 0, 0, 'Balsamiq', 'Description', 24 );
+	textPartDesc.x = box[0] + padding;
+	textPartDesc.y = box[1] + padding + sep;
+	textPartDesc.maxWidth = box[2] - 2*padding - sep;
+
+	var startLeft = WIDTH * 1/16;
+	var startTop = HEIGHT/2;
 	var width = slot_width.reduce((a, b) => a + b, 0);
 
-	var thick = 15;
-	var padding = 60 * scale;
-	var bar = game.add.graphics();
-	bar.beginFill( 0x333333, 1.0 );
-	bar.drawRect( left + padding, HEIGHT/2 - thick/2, width * scale - 2*padding, thick );
-	bar.endFill();
-
-
+	var left = startLeft;
+	var top = startTop;
 	for ( var i = 0; i < slots.length; i++ )
 	{
 		positions.push( [left, top] );
 		left += scale * slot_width[i];
 	}
+
+	var thick = 15;
+	var bar = game.add.graphics();
+	bar.beginFill( 0x333333, 1.0 );
+	var barLeft = startLeft + scale * slot_width[0]/2;
+	var barWidth = width - slot_width[0]/2 - slot_width[slots.length-1] - slot_width[slots.length-2]/2;
+	bar.drawRect( barLeft, startTop - thick/2, scale * barWidth, thick );
+	bar.endFill();
+
 
 	for ( var i = 0; i < slots.length; i++ )
 	{
@@ -139,7 +150,7 @@ function create()
 	}, this);
 
 
-	//updateDrag();
+	//drawLine();
 
 
 	for ( var i = 0; i < parts.length; i++ )
@@ -299,10 +310,15 @@ function setAtPosition( p, s )
 	if ( slots.indexOf( s ) > -1 )
 		slots[slots.indexOf( s )] = null;
 	slots[p] = s;
+	//slotBg[p].top += 100;
+
+	highlight = s;
+	textPartName.text = description[parts[s]]['name'];
+	textPartDesc.text = description[parts[s]]['desc'];
 }
 
 
-function updateDrag() {
+function drawLine() {
 	var pointsArray = [];
 
 	for(var i = 0; i < 4; i++) {
