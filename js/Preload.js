@@ -19,6 +19,8 @@ Preload.prototype = {
 		game.load.image( 'nozzle', 'images/parts/nozzle.png' );
 		game.load.image( 'afterburner', 'images/parts/afterburner.png' );
 
+		game.load.image( 'sky', 'images/sky.jpg' );
+		game.load.image( 'cloud', 'images/cloud.png' );
 		game.load.image( 'bg', 'images/bg.png' );
 
 		game.load.image( 'particle', 'images/particle.png' );

@@ -42,46 +42,87 @@ var successCount = 0;
 function getName( part )
 {
 	if ( part in partData )
-		return partData[part]['name']
+		return partData[parts[part]]['name']
 	return '-'
 }
 
-function simulate( parts, airflow=1.0, hot=false )
+function compareEngine( pps, seq )
 {
-	if ( parts.length <= 0 )
-		return;
-	var part = parts.shift();
+	console.log( pps, seq );
+	for ( var i = 0; i < seq.length; i++ )
+	{
+		if ( pps[i] != seq[i] )
+		return false;
+	}
+	return true;
+}
 
-	if ( part == 'Fanb' )
+function findFinishedEngine( pps )
+{
+	if ( compareEngine( pps, [2,3,4,5] ) )
+	{
+		return [
+			"Turbojetmotor",
+			"De första jetmotorerna som uppfanns var turbojetmotorer och fanns bland annat i den tyska flygplansmodellen Henkel He 178 år 1939.\nDet hade en maxhastighet på 598 km/h, så att flyga mellan Linköping och Stockholm med det planet skulle ta cirka 20 minuter. Samma sträcka skulle ta ungefär 2 timmar att resa med bil.",
+		];
+	}
+	if ( compareEngine( pps, [0,2,3,4,5] ) )
+	{
+		return [
+			"Turbofläktmotor",
+			"De första jetmotorerna som uppfanns var turbojetmotorer och fanns bland annat i den tyska flygplansmodellen Henkel He 178 år 1939.\nDet hade en maxhastighet på 598 km/h, så att flyga mellan Linköping och Stockholm med det planet skulle ta cirka 20 minuter. Samma sträcka skulle ta ungefär 2 timmar att resa med bil.",
+		];
+	}
+	if ( compareEngine( pps, [1,2,3,4,5] ) )
+	{
+		return [
+			"Turbopropmotor",
+			"De första jetmotorerna som uppfanns var turbojetmotorer och fanns bland annat i den tyska flygplansmodellen Henkel He 178 år 1939.\nDet hade en maxhastighet på 598 km/h, så att flyga mellan Linköping och Stockholm med det planet skulle ta cirka 20 minuter. Samma sträcka skulle ta ungefär 2 timmar att resa med bil.",
+		];
+	}
+
+	return [
+		"Okänd modell",
+		"...",
+	];
+}
+
+function simulate( pps, airflow=1.0, hot=false )
+{
+	if ( pps.length <= 0 )
+		return;
+	var part = pps.shift();
+
+	if ( part == 0 ) // fan
 	{
 	}
-	if ( part == 'Prop' )
+	if ( part == 1 ) // propeller
 	{
 	}
-	if ( part == 'Comp' )
+	if ( part == 2 ) // compressor
 	{
 		airflow /= 2;
 	}
-	if ( part == 'Comb' )
+	if ( part == 3 ) // combustor
 	{
 		hot = true;
 		if ( airflow >= 1.0 )
 			throw 'Combustion engine requires compressed air.';
 	}
-	if ( part == 'Turb' )
+	if ( part == 4 ) // turbine
 	{
 		if ( airflow >= 1.0 )
 			throw 'Turbine requires compressed air.';
 		airflow *= 2
 	}
-	if ( part == 'Nozz' )
+	if ( part == 5 ) // nozzle
 	{
 	}
-	if ( part == 'Burn' )
+	if ( part == 6 ) // burn
 	{
 		hot = true;
 	}
-	simulate( parts, airflow, hot );
+	simulate( pps, airflow, hot );
 }
 
 function getClean( input )
@@ -97,12 +138,12 @@ function getClean( input )
 }
 
 // @param input: ('part1', 'part2', ...)
-function isValid( input )
+function isValid( input, unique )
 {
 	// Filters physical limitations (when a user places a piece that shouldn't fit or cheating the RFID.)
 	input.forEach(function(slot) {
 		if ( slot )
-			if ( partData[slot]['allowed'].indexOf( input.indexOf(slot)+1 ) == -1 )
+			if ( partData[parts[slot]]['allowed'].indexOf( input.indexOf(slot)+1 ) == -1 )
 				throw 'Invalid placement.';
 	});
 	validCount += 1
@@ -110,28 +151,31 @@ function isValid( input )
 	// Filters unique cases, removing empty slots
 	var clean = getClean( input )
 	var key = clean.toString();
-	if ( uniqueCases.indexOf( key ) == -1 )
-		uniqueCases.push( key )
-	else
-		throw 'Case already covered.';
+	if ( unique )
+	{
+		if ( uniqueCases.indexOf( key ) == -1 )
+			uniqueCases.push( key )
+		else
+			throw 'Case already covered.';
+	}
 
 	simulate( clean )
 
 	return true;
 }
 
-function tryInput( input )
+function tryInput( input, unique=false )
 {
 	try
 	{
-		isValid( input );
+		isValid( input, unique );
 		successCount += 1;
 		var clean = getClean( input );
-		//console.log( '>', clean.toString() );
+		return [true, clean];
 	}
 	catch( error )
 	{
-		//console.log( error );
+		return [false, error];
 	}
 }
 
@@ -166,7 +210,7 @@ if ( false )
 	var perms = findPermutations( parts );
 	perms.forEach(function(p) {
 		// ie. ( None, 'Fan', None, None, 'Ńozzle', None )
-		tryInput( p );
+		tryInput( p, true );
 	});
 
 	var totalCount = perms.length;

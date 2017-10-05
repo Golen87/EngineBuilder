@@ -1,4 +1,6 @@
 
+parts = ['fan', 'propeller', 'compressor', 'combustor', 'turbine', 'nozzle', 'afterburner'];
+
 var Game = function()
 {
 	this.keys = {};
@@ -15,7 +17,6 @@ var Game = function()
 	this.previewSprite = null;
 	this.previewSize = 100;
 
-	this.parts = ['fan', 'propeller', 'compressor', 'combustor', 'turbine', 'nozzle', 'afterburner'];
 	this.partscale = [0.14, 0.3, 0.16, 0.10, 0.16, 0.15, 0.15];
 	this.slots = [null, null, null, null, null];
 
@@ -31,14 +32,19 @@ Game.prototype =
 	create: function()
 	{
 		game.stage.backgroundColor = '#ffffff';
+		game.add.tileSprite( 0, 0, game.width, game.height, 'sky' );
 
 
-		var box = [585, 30, WIDTH-585, 200];
+		var box = [600, 30, WIDTH-600, 200];
 
-		var bar = game.add.graphics();
-		bar.beginFill( 0x000000, 0.2 );
-		bar.drawRect( box[0], box[1], box[2], box[3] );
-		bar.endFill();
+		this.cloud = game.add.sprite( box[0] + box[2]/2, box[1] + box[3]/2, 'cloud' );
+		this.cloud.anchor.set( 0.5 );
+		this.cloud.scale.set( 0.5 );
+
+		//var bar = game.add.graphics();
+		//bar.beginFill( 0x000000, 0.2 );
+		//bar.drawRect( box[0], box[1], box[2], box[3] );
+		//bar.endFill();
 
 		var padding = 0;
 		this.textPartName = game.add.bitmapText( 0, 0, 'BalsamiqBold', 'Name', 32 );
@@ -115,6 +121,7 @@ Game.prototype =
 			s.events.onInputDown.add( function(sprite) {
 				this.game.remove( this.game.slots[sprite.index] );
 				this.game.setAtPosition( sprite.index, this.game.previewIndex );
+				this.game.runEngine();
 				//game.add.tween(this).to({
 				//	alpha: 0.8,
 				//}, 200, Phaser.Easing.Exponential.Out, true, 0, 0, true);
@@ -131,25 +138,25 @@ Game.prototype =
 		box.endFill();
 		preview.addChild( box );
 
-		this.previewSprite = game.add.sprite( this.previewSize/2, this.previewSize/2, this.parts[this.previewIndex], 0 );
+		this.previewSprite = game.add.sprite( this.previewSize/2, this.previewSize/2, parts[this.previewIndex], 0 );
 		this.previewSprite.anchor.set( 0.5, 0.5 );
-		this.previewSprite.scale.set( this.previewSize / game.cache.getImage( this.parts[this.previewIndex] ).height );
+		this.previewSprite.scale.set( this.previewSize / game.cache.getImage( parts[this.previewIndex] ).height );
 		preview.addChild( this.previewSprite );
 
 		preview.inputEnabled = true;
 		preview.events.onInputDown.add( function() {
-			this.previewIndex = (this.previewIndex + 1) % this.parts.length;
-			this.previewSprite.loadTexture( this.parts[this.previewIndex], 0 );
-			this.previewSprite.scale.set( this.previewSize / game.cache.getImage( this.parts[this.previewIndex] ).height );
+			this.previewIndex = (this.previewIndex + 1) % parts.length;
+			this.previewSprite.loadTexture( parts[this.previewIndex], 0 );
+			this.previewSprite.scale.set( this.previewSize / game.cache.getImage( parts[this.previewIndex] ).height );
 		}, this);
 
 
 		//this.drawLine();
 
 
-		for ( var i = 0; i < this.parts.length; i++ )
+		for ( var i = 0; i < parts.length; i++ )
 		{
-			var s = game.add.sprite( 0, 0, this.parts[i], 0 );
+			var s = game.add.sprite( 0, 0, parts[i], 0 );
 			this.sprites.push( s );
 			s.scale.set( this.partscale[i] * this.SCALE );
 
@@ -209,6 +216,7 @@ Game.prototype =
 		this.setAtPosition( 2, 3 );
 		this.setAtPosition( 3, 4 );
 		this.setAtPosition( 4, 5 );
+		this.runEngine();
 	},
 
 	update: function()
@@ -222,16 +230,18 @@ Game.prototype =
 					this.remove( this.slots[i] );
 					this.setAtPosition( i, this.selected );
 					this.selected = null;
+					this.runEngine();
 				}
 				else
 				{
 					this.remove( this.slots[i] );
 					this.slots[i] = null;
+					this.runEngine();
 				}
 			}
 		}
 
-		for ( var i = 0; i < this.parts.length; i++ )
+		for ( var i = 0; i < parts.length; i++ )
 		{
 			if ( this.keys[i][1].justDown )
 			{
@@ -243,11 +253,13 @@ Game.prototype =
 				{
 					this.remove( this.selected );
 					this.selected = null;
+					this.runEngine();
 				}
 				else
 				{
 					this.remove( this.selected );
 					this.setAsPreview( i );
+					this.runEngine();
 				}
 			}
 		}
@@ -266,6 +278,13 @@ Game.prototype =
 				}
 			}
 		}
+
+		var s = 0.5 + 0.5 * Math.sin( game.time.totalElapsedSeconds() * Math.PI );
+		s = 0;
+		var fac = s * 0xff;
+		this.textPartName.tint = (fac << 0) + (fac << 8) + (fac << 16);
+		this.textPartDesc.tint = (fac << 0) + (fac << 8) + (fac << 16);
+		this.cloud.tint = ((0xff - 0.5*fac << 0) + (0xff - 0.5*fac << 8) + (0xff - 0.5*fac << 16));
 	},
 };
 
@@ -285,19 +304,19 @@ Game.prototype.setAsPreview = function ( i )
 	this.sprites[i].y = this.SCALE / 4;
 
 	this.previewIndex = i;
-	this.previewSprite.loadTexture( this.parts[this.previewIndex], 0 );
-	this.previewSprite.scale.set( this.previewSize / game.cache.getImage( this.parts[this.previewIndex] ).height );
-}
+	this.previewSprite.loadTexture( parts[this.previewIndex], 0 );
+	this.previewSprite.scale.set( this.previewSize / game.cache.getImage( parts[this.previewIndex] ).height );
+};
 
 Game.prototype.remove = function ( i )
 {
 	if ( i != null )
 		this.sprites[i].x = -1000;
-}
+};
 
 Game.prototype.setAtPosition = function ( p, s )
 {
-	if ( partData[this.parts[s]]['allowed'].indexOf( p+1 ) == -1 )
+	if ( partData[parts[s]]['allowed'].indexOf( p+1 ) == -1 )
 	{
 		this.sprites[s].tint = 0xff7777;
 		this.sprites[s].alpha = 0.75;
@@ -322,10 +341,11 @@ Game.prototype.setAtPosition = function ( p, s )
 	this.slots[p] = s;
 	//this.slotBg[p].top += 100;
 
+	if ( this.highlight )
+		this.highlight.tint = 0xffffff;
 	this.highlight = s;
-	this.textPartName.text = description[this.parts[s]]['name'];
-	this.textPartDesc.text = description[this.parts[s]]['desc'];
-}
+	this.highlight.tint = 0xffff77;
+};
 
 
 Game.prototype.drawLine = function () {
@@ -350,7 +370,7 @@ Game.prototype.drawLine = function () {
 		var p = this.bezierPoint(pointsArray[0], pointsArray[1], pointsArray[2], pointsArray[3], i);
 		bezierGraphics.lineTo(p.x, p.y);
 	}
-}
+};
 
 Game.prototype.bezierPoint = function (p0, p1, p2, p3, t) {
 	var cX = 3 * (p1.x - p0.x);
@@ -362,4 +382,22 @@ Game.prototype.bezierPoint = function (p0, p1, p2, p3, t) {
 	var x = (aX * Math.pow(t, 3)) + (bX * Math.pow(t, 2)) + (cX * t) + p0.x;
 	var y = (aY * Math.pow(t, 3)) + (bY * Math.pow(t, 2)) + (cY * t) + p0.y;
 	return {x: x, y: y};	
-}
+};
+
+Game.prototype.runEngine = function () {
+	var result = tryInput( this.slots );
+	var success = result[0];
+	var text = result[1];
+
+	if ( !success )
+	{
+		this.textPartName.text = "*suck*";
+		this.textPartDesc.text = text;
+	}
+	else
+	{
+		var t = findFinishedEngine( getClean( this.slots ) );
+		this.textPartName.text = t[0];
+		this.textPartDesc.text = t[1];
+	}
+};
