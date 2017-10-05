@@ -20,8 +20,12 @@ function preload()
 var jetDesc = "A jet engine is a reaction engine discharging a fast-moving jet that generates thrust by jet propulsion. This broad definition includes airbreathing jet engines (turbojets, turbofans, ramjets, and pulse jets) and non-airbreathing jet engines (such as rocket engines). In general, jet engines are combustion engines.";
 var keys = {};
 var sprites = [];
+var slotBg = [];
 var selected = null;
 var textObj;
+
+var previewIndex = 0;
+var previewSprite = null;
 
 var parts = ['fan', 'propeller', 'compressor', 'combustor', 'turbine', 'nozzle', 'afterburner'];
 var partscale = [0.2, 0.3, 1.0, 1.0, 1.0, 1.0, 1.0];
@@ -63,6 +67,7 @@ function create()
 	var bar = game.add.graphics();
 	bar.beginFill( 0x333333, 1.0 );
 	bar.drawRect( left + padding, HEIGHT/2 - thick/2, width * scale - 2*padding, thick );
+	bar.endFill();
 
 
 	for ( var i = 0; i < slots.length; i++ )
@@ -76,20 +81,65 @@ function create()
 		var p = positions[i];
 
 		var box = game.add.graphics();
+		slotBg.push( box );
 		box.beginFill( 0x000000, 0.1 );
 		var padding = 5;
 		var left = p[0]+padding;
+		var w = slot_width[i]*scale-2*padding;
 		var topL = p[1]+padding - slot_height[i]/2*scale;
+		var hL = slot_height[i+1]*scale-2*padding;
 		var topR = p[1]+padding - slot_height[i+1]/2*scale;
+		var hR = slot_height[i]*scale-2*padding;
 		var poly = new Phaser.Polygon([
 			new Phaser.Point( left, topL ),
-			new Phaser.Point( left + slot_width[i]*scale-2*padding, topR ),
-			new Phaser.Point( left + slot_width[i]*scale-2*padding, topR + slot_height[i+1]*scale-2*padding ),
-			new Phaser.Point( left, topL + slot_height[i]*scale-2*padding )
+			new Phaser.Point( left + w, topR ),
+			new Phaser.Point( left + w, topR + hL ),
+			new Phaser.Point( left, topL + hR )
 		]);
 		box.drawPolygon(poly.points);
 		box.endFill();
+
+		var s = game.add.sprite( 0, 0, null );
+		s.addChild( box );
+		s.index = i;
+		s.texture.frame.width = w;
+		s.texture.frame.height = hR;
+		s.anchor.set( -left/w, -topL/hR );
+		s.inputEnabled = true;
+		s.events.onInputDown.add( function() {
+			setAtPosition( this.index, previewIndex );
+			//game.add.tween(this).to({
+			//	alpha: 0.8,
+			//}, 200, Phaser.Easing.Exponential.Out, true, 0, 0, true);
+		}, s);
 	}
+
+
+	var size = 100;
+	var preview = game.add.sprite( WIDTH - size, HEIGHT - size, null );
+
+	var box = game.add.graphics();
+	box.beginFill( 0xffff00, 0.5 );
+	//box.drawRect( 0, 0, size, size );
+	box.drawCircle( size/2, size/2, size );
+	box.endFill();
+	preview.addChild( box );
+
+	previewSprite = game.add.sprite( size/2, size/2, parts[previewIndex], 0 );
+	previewSprite.anchor.set( 0.5, 0.5 );
+	previewSprite.scale.set( size / game.cache.getImage( parts[previewIndex] ).height );
+	preview.addChild( previewSprite );
+
+	preview.inputEnabled = true;
+	preview.events.onInputDown.add( function() {
+		previewIndex = (previewIndex + 1) % parts.length;
+		previewSprite.loadTexture( parts[previewIndex], 0 );
+		previewSprite.scale.set( size / game.cache.getImage( parts[previewIndex] ).height );
+	}, this);
+
+
+	//updateDrag();
+
 
 	for ( var i = 0; i < parts.length; i++ )
 	{
@@ -157,7 +207,8 @@ function update()
 			if ( selected != null )
 			{
 				remove( slots[i] );
-				setAtPosition( i );
+				setAtPosition( i, selected );
+				selected = null;
 			}
 			else
 			{
@@ -225,25 +276,61 @@ function remove( i )
 		sprites[i].x = -1000;
 }
 
-function setAtPosition( p )
+function setAtPosition( p, s )
 {
-	if ( partData[parts[selected]]['allowed'].indexOf( p+1 ) == -1 )
+	if ( partData[parts[s]]['allowed'].indexOf( p+1 ) == -1 )
 	{
-		sprites[selected].tint = 0xff7777;
-		sprites[selected].alpha = 0.75;
+		sprites[s].tint = 0xff7777;
+		sprites[s].alpha = 0.75;
 	}
 	else
 	{
-		sprites[selected].tint = 0xffffff;
-		sprites[selected].alpha = 1.0;
+		sprites[s].tint = 0xffffff;
+		sprites[s].alpha = 1.0;
 	}
 
 	var padding = 10;
-	sprites[selected].position.x = positions[p][0] + scale * ( padding + ( slot_width[p] - 2*padding ) * slot_anchor[p] );
-	sprites[selected].position.y = positions[p][1];
-	sprites[selected].scale.set( partscale[selected] * scale );
-	sprites[selected].anchor.set( slot_anchor[p], 0.5 );
+	sprites[s].position.x = positions[p][0] + scale * ( padding + ( slot_width[p] - 2*padding ) * slot_anchor[p] );
+	sprites[s].position.y = positions[p][1];
+	sprites[s].scale.set( partscale[s] * scale );
+	sprites[s].anchor.set( slot_anchor[p], 0.5 );
 
-	slots[p] = selected;
-	selected = null;
+	slots[p] = s;
+}
+
+
+function updateDrag() {
+	var pointsArray = [];
+
+	for(var i = 0; i < 4; i++) {
+		var p = new Phaser.Point( game.rnd.between(0, WIDTH), game.rnd.between(0, HEIGHT) );
+		pointsArray.push( p );
+	}
+	var bezierGraphics = this.game.add.graphics(0, 0);
+
+	bezierGraphics.clear();
+	bezierGraphics.lineStyle(2, 0x008800, 1);
+	bezierGraphics.moveTo(pointsArray[1].x, pointsArray[1].y);
+	bezierGraphics.lineTo(pointsArray[0].x, pointsArray[0].y);
+	bezierGraphics.lineStyle(2, 0x880000, 1)
+	bezierGraphics.moveTo(pointsArray[3].x, pointsArray[3].y);
+	bezierGraphics.lineTo(pointsArray[2].x, pointsArray[2].y);
+	bezierGraphics.lineStyle(4, 0xffff00, 1);
+	bezierGraphics.moveTo(pointsArray[0].x, pointsArray[0].y);
+	for (var i=0; i<1; i+=0.01){
+		var p = bezierPoint(pointsArray[0], pointsArray[1], pointsArray[2], pointsArray[3], i);
+		bezierGraphics.lineTo(p.x, p.y);
+	}
+}
+
+function bezierPoint(p0, p1, p2, p3, t) {
+	var cX = 3 * (p1.x - p0.x);
+	var bX = 3 * (p2.x - p1.x) - cX;
+	var aX = p3.x - p0.x - cX - bX;
+	var cY = 3 * (p1.y - p0.y);
+	var bY = 3 * (p2.y - p1.y) - cY;
+	var aY = p3.y - p0.y - cY - bY;
+	var x = (aX * Math.pow(t, 3)) + (bX * Math.pow(t, 2)) + (cX * t) + p0.x;
+	var y = (aY * Math.pow(t, 3)) + (bY * Math.pow(t, 2)) + (cY * t) + p0.y;
+	return {x: x, y: y};	
 }
