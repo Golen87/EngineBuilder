@@ -107,6 +107,7 @@ function create()
 		s.anchor.set( -left/w, -topL/hR );
 		s.inputEnabled = true;
 		s.events.onInputDown.add( function() {
+			remove( slots[this.index] );
 			setAtPosition( this.index, previewIndex );
 			//game.add.tween(this).to({
 			//	alpha: 0.8,
@@ -295,6 +296,8 @@ function setAtPosition( p, s )
 	sprites[s].scale.set( partscale[s] * scale );
 	sprites[s].anchor.set( slot_anchor[p], 0.5 );
 
+	if ( slots.indexOf( s ) > -1 )
+		slots[slots.indexOf( s )] = null;
 	slots[p] = s;
 }
 
