@@ -48,7 +48,6 @@ function getName( part )
 
 function compareEngine( pps, seq )
 {
-	console.log( pps, seq );
 	for ( var i = 0; i < seq.length; i++ )
 	{
 		if ( pps[i] != seq[i] )
@@ -62,28 +61,41 @@ function findFinishedEngine( pps )
 	if ( compareEngine( pps, [2,3,4,5] ) )
 	{
 		return [
-			"Turbojetmotor",
+			"ENGINE",
+			"\nTurbojetmotor",
 			"De första jetmotorerna som uppfanns var turbojetmotorer och fanns bland annat i den tyska flygplansmodellen Henkel He 178 år 1939.\nDet hade en maxhastighet på 598 km/h, så att flyga mellan Linköping och Stockholm med det planet skulle ta cirka 20 minuter. Samma sträcka skulle ta ungefär 2 timmar att resa med bil.",
 		];
 	}
 	if ( compareEngine( pps, [0,2,3,4,5] ) )
 	{
 		return [
-			"Turbofläktmotor",
+			"ENGINE",
+			"\nTurbofläktmotor",
 			"De första jetmotorerna som uppfanns var turbojetmotorer och fanns bland annat i den tyska flygplansmodellen Henkel He 178 år 1939.\nDet hade en maxhastighet på 598 km/h, så att flyga mellan Linköping och Stockholm med det planet skulle ta cirka 20 minuter. Samma sträcka skulle ta ungefär 2 timmar att resa med bil.",
 		];
 	}
 	if ( compareEngine( pps, [1,2,3,4,5] ) )
 	{
 		return [
-			"Turbopropmotor",
-			"De första jetmotorerna som uppfanns var turbojetmotorer och fanns bland annat i den tyska flygplansmodellen Henkel He 178 år 1939.\nDet hade en maxhastighet på 598 km/h, så att flyga mellan Linköping och Stockholm med det planet skulle ta cirka 20 minuter. Samma sträcka skulle ta ungefär 2 timmar att resa med bil.",
+			"ENGINE",
+			"Grattis! Du har byggt\nen turbopropmotor!",
+			"Turbopropmotorer är lika turbojetmotorer men har även en propeller monterad i fram som suger in luft i motorn. Turbopropmotorer använder mycket bränsle men är också väldigt kraftfulla och tillförlitliga. De används ofta i mindre trafikflygplan som ATR 72 som kan flyga i hastigheter runt 500 km/h. Att flyga från Linköping till Stockholm i ett sådant plan skulle ta cirka 24 min. Att färdas samma sträcka med bil tar ungefär 2 timmar.",
+		];
+	}
+
+	if ( pps.length == 0 )
+	{
+		return [
+			"INFO",
+			"\nHoppsan! Den delen kan inte monteras där!",
+			"Prova att montera delen på en annan plats.",
 		];
 	}
 
 	return [
-		"Okänd modell",
-		"...",
+		"ERROR",
+		"\nHoppsan! Den delen kan inte monteras där!",
+		"Prova att montera delen på en annan plats.",
 	];
 }
 

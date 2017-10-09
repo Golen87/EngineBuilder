@@ -23,6 +23,11 @@ Preload.prototype = {
 		game.load.image( 'cloud', 'images/cloud.png' );
 		game.load.image( 'bg', 'images/bg.png' );
 
+		game.load.image( 'brain', 'images/icons/brain.png' );
+		game.load.image( 'error', 'images/icons/error.png' );
+		game.load.image( 'check', 'images/icons/check.png' );
+		game.load.image( 'info', 'images/icons/info.png' );
+
 		game.load.image( 'particle', 'images/particle.png' );
 
 

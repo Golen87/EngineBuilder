@@ -5,6 +5,7 @@ var Game = function()
 {
 	this.keys = {};
 	this.sprites = [];
+	this.slotSprites = [];
 	this.slotBg = [];
 	this.selected = null;
 	this.highlight = null;
@@ -15,16 +16,22 @@ var Game = function()
 
 	this.previewIndex = 0;
 	this.previewSprite = null;
-	this.previewSize = 100;
+	this.previewSize = 50;
 
 	this.partscale = [0.14, 0.3, 0.16, 0.10, 0.16, 0.15, 0.15];
+	this.partWidth = [212, 73, 553, 802, 553, 409, 610];
 	this.slots = [null, null, null, null, null];
 
 	this.positions = [];
 	this.slot_width = [56, 80, 80, 80, 80];
 	this.slot_height = [80+30, 80, 80, 80, 80, 80-30];
 	this.slot_anchor = [1.0, 0.5, 0.5, 0.5, 0.0];
+	this.part_body_height = [250, 250, 110, 30, 50, 110, 110];
 	this.SCALE = 1.5;
+
+	this.NOPOWER = 2;
+	this.POWER = 20;
+	this.animationSpeed = this.NOPOWER;
 };
 
 Game.prototype =
@@ -33,13 +40,13 @@ Game.prototype =
 	{
 		game.physics.startSystem( Phaser.Physics.ARCADE );
 
-		this.engineLeft = WIDTH * 1/12;
+		this.engineLeft = 20;
 		this.engineTop = HEIGHT/2;
 		this.engineWidth = this.slot_width.reduce((a, b) => a + b, 0);
 
 		this.drawBackground();
-
-		this.drawInfoCloud();
+		this.drawInfo();
+		this.drawEngineHull();
 
 		this.calculateSlotPositions();
 
@@ -59,17 +66,25 @@ Game.prototype =
 		//this.drawLine();
 
 		// Temporary. Remove later.
-		this.setAtPosition( 0, 0 );
-		this.setAtPosition( 1, 2 );
-		this.setAtPosition( 2, 3 );
-		this.setAtPosition( 3, 4 );
-		this.setAtPosition( 4, 5 );
+		//this.setAtPosition( 0, 0 );
+		//this.setAtPosition( 1, 2 );
+		//this.setAtPosition( 2, 3 );
+		//this.setAtPosition( 3, 4 );
+		//this.setAtPosition( 4, 5 );
 
 		this.runEngine();
+
+		this.animationFrame = 0;
+		this.animate();
 	},
 
 	update: function()
 	{
+		if ( this.animationSpeed < this.animationSpeedGoal )
+			this.animationSpeed += 1;
+		else if ( this.animationSpeed > this.animationSpeedGoal )
+			this.animationSpeed -= 1;
+
 		for ( var i = 0; i < this.slots.length; i++ )
 		{
 			if ( this.keys[i][0].justDown )
@@ -84,7 +99,7 @@ Game.prototype =
 				else
 				{
 					this.remove( this.slots[i] );
-					this.slots[i] = null;
+					this.clearSlot( i );
 					this.runEngine();
 				}
 			}
@@ -111,29 +126,26 @@ Game.prototype =
 					this.runEngine();
 				}
 			}
+
+			this.sprites[i].frame = this.animationFrame;
 		}
 
-		for ( var i = 0; i < this.particles.children.length; i++ )
+		this.updateParticles();
+
+		//var s = 0.5 + 0.5 * Math.sin( game.time.totalElapsedSeconds() * Math.PI );
+		//s = 0;
+		//var fac = s * 0xff;
+		//this.textPartName.tint = (fac << 0) + (fac << 8) + (fac << 16);
+		//this.textPartDesc.tint = (fac << 0) + (fac << 8) + (fac << 16);
+		//this.cloud.tint = ((0xff - 0.5*fac << 0) + (0xff - 0.5*fac << 8) + (0xff - 0.5*fac << 16));
+	},
+
+	render: function()
+	{
+		for ( var i = 0; i < this.slotSprites.length; i++ )
 		{
-			var s = this.particles.children[i];
-			if ( s.alive )
-			{
-				s.position.x += s.velocity.x;
-				s.position.y += s.velocity.y;
-
-				if ( s.position.x > WIDTH + 50 )
-				{
-					s.position.x -= WIDTH + 100;
-				}
-			}
+			//game.debug.body( this.slotSprites[i] );
 		}
-
-		var s = 0.5 + 0.5 * Math.sin( game.time.totalElapsedSeconds() * Math.PI );
-		s = 0;
-		var fac = s * 0xff;
-		this.textPartName.tint = (fac << 0) + (fac << 8) + (fac << 16);
-		this.textPartDesc.tint = (fac << 0) + (fac << 8) + (fac << 16);
-		this.cloud.tint = ((0xff - 0.5*fac << 0) + (0xff - 0.5*fac << 8) + (0xff - 0.5*fac << 16));
 	},
 
 	drawBackground: function()
@@ -143,15 +155,52 @@ Game.prototype =
 		// Draw background
 		game.add.tileSprite( 0, 0, game.width, game.height, 'sky' );
 
-		// Draw main axis, connecting fan with turbine
-		var thick = 15;
-		var bar = game.add.graphics();
-		bar.beginFill( 0x333333, 1.0 );
-		var barLeft = this.engineLeft + this.SCALE * ( this.slot_width[0]/2 - 5 );
-		var barWidth = this.engineWidth - this.slot_width[0]/2 - this.slot_width[this.slots.length-1];
-		bar.drawRect( barLeft, this.engineTop - thick/2, this.SCALE * barWidth, thick );
-		bar.endFill();
+		this.cloud = game.add.sprite( 200, 50, 'cloud' );
+		this.cloud.anchor.set( 0.5 );
+		this.cloud.scale.set( 0.5 );
+		this.cloud2 = game.add.sprite( 900, 500, 'cloud' );
+		this.cloud2.anchor.set( 0.5 );
+		this.cloud2.scale.set( 0.5 );
+	},
 
+	drawInfo: function()
+	{
+		var box = [610, 10, WIDTH-610, 200];
+
+		// Information cloud, top-right
+		//this.cloud = game.add.sprite( box[0] + box[2]/2, box[1] + box[3]/2, 'cloud' );
+
+		this.icon = game.add.sprite( box[0] - 80, box[1] + 30, 'info' );
+		this.icon.scale.set( 0.12 );
+
+		var padding = 10;
+		this.textPartName = game.add.bitmapText( 0, 0, 'BalsamiqBold', 'Name', 32 );
+		this.textPartName.x = box[0] + padding;
+		this.textPartName.y = box[1] + padding;
+		this.textPartName.tint = 0x000000;
+
+		var sep = 80;
+		this.textPartDesc = game.add.bitmapText( 0, 0, 'Balsamiq', 'Description', 20 );
+		this.textPartDesc.x = box[0] + padding;
+		this.textPartDesc.y = box[1] + padding + sep;
+		this.textPartDesc.maxWidth = box[2] - 2*padding;
+		this.textPartDesc.tint = 0x000000;
+
+
+		var box = [610, 450, WIDTH-610, 200];
+
+		this.brain = game.add.sprite( box[0] - 80, box[1], 'brain' );
+		this.brain.scale.set( 0.48 );
+
+		this.brainText = game.add.bitmapText( 0, 0, 'Balsamiq', 'Description', 20 );
+		this.brainText.x = box[0] + padding;
+		this.brainText.y = box[1] + padding;
+		this.brainText.maxWidth = box[2] - 2*padding;
+		this.brainText.tint = 0x000000;
+	},
+
+	drawEngineHull: function()
+	{
 		// Draw engine hull
 		var x = this.engineLeft + this.SCALE * (this.engineWidth/2 + this.slot_width[0]/5);
 		var y = this.engineTop;
@@ -160,27 +209,15 @@ Game.prototype =
 		this.background.anchor.set( 0.5, 0.5 );
 		this.background.scale.set( this.SCALE * scale );
 		this.background.alpha = 1.0;
-	},
 
-	drawInfoCloud: function()
-	{
-		var box = [600, 30, WIDTH-600, 200];
-
-		// Information cloud, top-right
-		this.cloud = game.add.sprite( box[0] + box[2]/2, box[1] + box[3]/2, 'cloud' );
-		this.cloud.anchor.set( 0.5 );
-		this.cloud.scale.set( 0.5 );
-
-		var padding = 0;
-		this.textPartName = game.add.bitmapText( 0, 0, 'BalsamiqBold', 'Name', 32 );
-		this.textPartName.x = box[0] + padding;
-		this.textPartName.y = box[1] + padding;
-
-		var sep = 48;
-		this.textPartDesc = game.add.bitmapText( 0, 0, 'Balsamiq', 'Description', 24 );
-		this.textPartDesc.x = box[0] + padding;
-		this.textPartDesc.y = box[1] + padding + sep;
-		this.textPartDesc.maxWidth = box[2] - 2*padding - sep;
+		// Draw main axis, connecting fan with turbine
+		var thick = 15;
+		var bar = game.add.graphics();
+		bar.beginFill( 0x333333, 1.0 );
+		var barLeft = this.engineLeft + this.SCALE * ( this.slot_width[0]/2 - 5 );
+		var barWidth = this.engineWidth - this.slot_width[0]/2 - this.slot_width[this.slots.length-1];
+		bar.drawRect( barLeft, this.engineTop - thick/2, this.SCALE * barWidth, thick );
+		bar.endFill();
 	},
 
 	setupSlots: function()
@@ -196,30 +233,33 @@ Game.prototype =
 			var left = p[0]+padding;
 			var w = this.slot_width[i]*this.SCALE-2*padding;
 			var topL = p[1]+padding - this.slot_height[i]/2*this.SCALE;
-			var hL = this.slot_height[i+1]*this.SCALE-2*padding;
+			var hL = this.slot_height[i]*this.SCALE-2*padding;
 			var topR = p[1]+padding - this.slot_height[i+1]/2*this.SCALE;
-			var hR = this.slot_height[i]*this.SCALE-2*padding;
+			var hR = this.slot_height[i+1]*this.SCALE-2*padding;
 			var poly = new Phaser.Polygon([
 				new Phaser.Point( left, topL ),
 				new Phaser.Point( left + w, topR ),
-				new Phaser.Point( left + w, topR + hL ),
-				new Phaser.Point( left, topL + hR )
+				new Phaser.Point( left + w, topR + hR ),
+				new Phaser.Point( left, topL + hL )
 			]);
 			box.drawPolygon(poly.points);
 			box.endFill();
 
 			var s = game.add.sprite( 0, 0, null );
+			this.slotSprites.push(s);
 			s.addChild( box );
 			s.index = i;
 			s.texture.frame.width = w;
-			s.texture.frame.height = hR;
-			s.anchor.set( -left/w, -topL/hR );
+			s.texture.frame.height = hL;
+			//s.anchor.set( -left/w, -topL/hR );
 			s.inputEnabled = true;
 			s.events.onInputDown.add( function(sprite) {
 				this.game.remove( this.game.slots[sprite.index] );
 				this.game.setAtPosition( sprite.index, this.game.previewIndex );
 				this.game.runEngine();
 			}, {game: this, sprite: s});
+
+			game.physics.arcade.enable( s, Phaser.Physics.ARCADE );
 		}
 	},
 
@@ -242,9 +282,8 @@ Game.prototype =
 			this.sprites.push( s );
 			s.scale.set( this.partscale[i] * this.SCALE );
 
-
-			s.animations.add( 'run', [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18], 20, true );
-			s.animations.play( 'run' );
+			//s.animations.add( 'run', [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18], 20, true );
+			//s.animations.play( 'run' );
 
 			this.remove( i );
 		}
@@ -289,19 +328,115 @@ Game.prototype =
 	setupParticles: function()
 	{
 		this.particles = game.add.group();
-		this.particles.createMultiple( 200, 'particle', 0, true );
+		this.particles.createMultiple( 400, 'particle', 0, true );
 
 		for ( var i = 0; i < this.particles.children.length; i++ )
 		{
 			var s = this.particles.children[i];
-			s.tint = 0xff0000;
-			s.tint = 0x88ddff;
+			game.physics.arcade.enable( s, Phaser.Physics.ARCADE );
+			s.startTint = 0x88ddff;
+			s.tint = s.startTint;
 			s.anchor.set( 0.5 );
 			s.scale.set( 0.5 );
 			s.alpha = 0.2;
 			s.position.x = game.rnd.integerInRange( 0, WIDTH );
-			s.position.y = game.rnd.integerInRange( 150, HEIGHT-150 );
-			s.velocity = new Phaser.Point( 4, 0 );
+			s.position.y = game.rnd.integerInRange( 130, HEIGHT-130 );
+			s.startVelocity = new Phaser.Point( 3+Math.random(), 0 );
+			s.velocity = new Phaser.Point( s.startVelocity.x, s.startVelocity.y );
+
+			s.lastSlot = -1;
+		}
+	},
+
+	updateParticles: function()
+	{
+
+		for ( var i = 0; i < this.particles.children.length; i++ )
+		{
+			var s = this.particles.children[i];
+			if ( s.alive )
+			{
+				s.position.x += s.velocity.x;
+				s.position.y += s.velocity.y;
+
+				if ( s.position.x > WIDTH + 50 )
+				{
+					s.position.x -= WIDTH + 100;
+					s.position.y = game.rnd.integerInRange( 130, HEIGHT-130 );
+					s.velocity.x = s.startVelocity.x;
+					s.velocity.y = s.startVelocity.y;
+					s.tint = s.startTint;
+					s.lastSlot = -1;
+				}
+
+				for ( var j = 0; j < this.slots.length; j++ )
+				{
+					if ( s.lastSlot == j )
+						continue;
+					var scale = this.animationSpeed / this.POWER;
+
+				game.physics.arcade.overlap( s, this.slotSprites[j], function( s, slot ) {
+					s.lastSlot = j;
+
+					var p = parts[this.slots[j]];
+					if ( p == 'fan' || p == 'propeller' )
+					{
+						var speed = 350;
+						var fac = 1.0 - 0.1 * scale;
+						var pFac = 1.0 - 0.5 * scale;
+						game.add.tween( s.position ).to({ y: this.engineTop + (s.position.y - this.engineTop)*pFac }, speed, Phaser.Easing.Circular.InOut, true );
+						game.add.tween( s.velocity ).to({ x: s.velocity.x * fac }, speed, Phaser.Easing.Circular.InOut, true );
+						//game.add.tween( s.scale ).to({ x: s.scale.x*fac, y: s.scale.y*fac }, speed, Phaser.Easing.Circular.InOut, true );
+						//this.tweenTint( s, s.tint, 0x55ff77, speed );
+					}
+					else if ( p == 'compressor' )
+					{
+						var speed = 600;
+						var fac = 1.0 - 0.4 * scale;
+						var pFac = 1.0 - 0.66 * scale;
+						game.add.tween( s.position ).to({ y: this.engineTop + (s.position.y - this.engineTop)*pFac }, speed, Phaser.Easing.Circular.InOut, true );
+						game.add.tween( s.velocity ).to({ x: s.velocity.x * fac }, speed, Phaser.Easing.Circular.InOut, true );
+						//game.add.tween( s.scale ).to({ x: fac, y: fac }, speed, Phaser.Easing.Circular.InOut, true );
+						//this.tweenTint( s, s.tint, 0xccff11, speed );
+					}
+					else if ( p == 'combustor' )
+					{
+						var speed = 250;
+						var fac = 5.3;
+						game.add.tween( s.velocity ).to({ x: s.velocity.x * fac }, speed, Phaser.Easing.Circular.In, true );
+						this.tweenTint( s, s.tint, 0xff0000, speed );
+					}
+					else if ( p == 'turbine' && s.velocity.x > 10 )
+					{
+						var speed = 150;
+						var fac = 1.0 - 0.3 * scale;
+						var pFac = 1.0 + 2.0 * scale;
+						game.add.tween( s.position ).to({ y: this.engineTop + (s.position.y - this.engineTop)*pFac }, speed, Phaser.Easing.Circular.InOut, true );
+						game.add.tween( s.velocity ).to({ x: s.velocity.x * fac }, speed, Phaser.Easing.Circular.InOut, true );
+						//game.add.tween( s.scale ).to({ x: fac, y: fac }, speed, Phaser.Easing.Circular.InOut, true );
+						this.tweenTint( s, s.tint, 0xffff00, speed );
+					}
+					else if ( p == 'nozzle' )
+					{
+						var speed = 300;
+						var pFac = 1.0 - 0.23 * scale;
+						game.add.tween( s.position ).to({ y: this.engineTop + (s.position.y - this.engineTop)*pFac }, speed, Phaser.Easing.Circular.InOut, true );
+						//game.add.tween( s.scale ).to({ x: fac, y: fac }, speed, Phaser.Easing.Circular.InOut, true );
+						//this.tweenTint( s, s.tint, 0x0000ff, speed );
+					}
+					else if ( p == 'afterburner' )
+					{
+						var speed = 300;
+						var fac = 4;
+						game.add.tween( s.velocity ).to({ x: s.velocity.x * fac }, speed, Phaser.Easing.Circular.In, true );
+						//game.add.tween( s.position ).to({ y: this.engineTop + (s.position.y - this.engineTop)*2 }, speed, Phaser.Easing.Circular.InOut, true );
+						//game.add.tween( s.scale ).to({ x: fac, y: fac }, speed, Phaser.Easing.Circular.InOut, true );
+						this.tweenTint( s, s.tint, 0xff0000, speed );
+					}
+				}, null, this );
+
+				}
+			}
 		}
 	},
 
@@ -332,7 +467,9 @@ Game.prototype.setAsPreview = function ( i )
 	this.selected = i;
 
 	if ( this.slots.indexOf( i ) > -1 )
-		this.slots[this.slots.indexOf( i )] = null;
+	{
+		this.clearSlot( this.slots.indexOf( i ) );
+	}
 
 	this.sprites[i].tint = 0xffffff;
 	this.sprites[i].alpha = 1.0;
@@ -349,7 +486,16 @@ Game.prototype.setAsPreview = function ( i )
 Game.prototype.remove = function ( i )
 {
 	if ( i != null )
+	{
 		this.sprites[i].x = -1000;
+	}
+};
+
+Game.prototype.clearSlot = function ( i )
+{
+	this.slots[i] = null;
+	this.slotSprites[i].body.setSize( 0, 0 );
+	this.updateSpeed();
 };
 
 Game.prototype.setAtPosition = function ( p, s )
@@ -375,7 +521,9 @@ Game.prototype.setAtPosition = function ( p, s )
 	this.sprites[s].anchor.set( anchor, 0.5 );
 
 	if ( this.slots.indexOf( s ) > -1 )
-		this.slots[this.slots.indexOf( s )] = null;
+	{
+		this.clearSlot( this.slots.indexOf( s ) );
+	}
 	this.slots[p] = s;
 	//this.slotBg[p].top += 100;
 
@@ -383,6 +531,15 @@ Game.prototype.setAtPosition = function ( p, s )
 		this.highlight.tint = 0xffffff;
 	this.highlight = s;
 	this.highlight.tint = 0xffff77;
+
+	var left = this.positions[p][0]+padding;
+	var w = this.slot_width[p]*this.SCALE-2*padding;
+	var topL = this.positions[p][1]+padding - this.slot_height[p]/2*this.SCALE;
+	var hL = this.slot_height[p]*this.SCALE-2*padding;
+	var h = this.part_body_height[s];
+	this.slotSprites[p].body.setSize( 50, h, left, topL + hL/2 - h/2 );
+
+	this.updateSpeed();
 };
 
 
@@ -435,7 +592,68 @@ Game.prototype.runEngine = function () {
 	else
 	{
 		var t = findFinishedEngine( getClean( this.slots ) );
-		this.textPartName.text = t[0];
-		this.textPartDesc.text = t[1];
+		var type = t[0];
+
+		if ( type == 'ERROR' )
+		{
+			this.icon.loadTexture( 'error', 0 );
+			this.textPartDesc.text = "Propellern suger in luft i motorn. För att göra motorn mer effektiv behövs även en motordel som pressar samman luften.";
+		}
+		else if ( type == 'ENGINE' )
+		{
+			this.icon.loadTexture( 'check', 0 );
+			this.textPartName.text = t[1];
+			this.textPartDesc.text = t[2];
+			this.brainText.text = "Det finns fortfarande fler motorer att bygga. Prova till exempel att byta ut propellern mot en annan motordel.";
+			//"Det finns fortfarande fler motorer att bygga. Du kan göra motorn mer effektiv genom att lägga till en motordel som suger in luft i motorn."
+		}
+		else if ( type == 'ENGINE' )
+		{
+			this.icon.loadTexture( 'info', 0 );
+			this.textPartName.text = t[1];
+			this.textPartDesc.text = t[2];
+		}
+	}
+};
+
+Game.prototype.tweenTint = function (obj, startColor, endColor, time)
+{
+	var colorBlend = {step: 0};
+	var colorTween = game.add.tween(colorBlend).to({step: 100}, time);
+
+	colorTween.onUpdateCallback(function() {
+		obj.tint = Phaser.Color.interpolateColor(startColor, endColor, 100, colorBlend.step);
+	});
+
+	obj.tint = startColor;
+	colorTween.start();
+};
+
+Game.prototype.animate = function ()
+{
+	this.animationFrame = (this.animationFrame + 1) % 19;
+	game.time.events.add( Phaser.Timer.SECOND / this.animationSpeed, this.animate, this );
+}
+
+Game.prototype.updateSpeed = function ()
+{
+	var list = [];
+	for ( var i = 0; i < this.slots.length; i++ )
+	{
+		if ( this.slots[i] != null )
+			list.push( parts[this.slots[i]] );
+	}
+
+	this.animationSpeedGoal = this.NOPOWER;
+
+	if ( list.indexOf('combustor') != -1 && list.indexOf('turbine') != -1 && list.indexOf('combustor') < list.indexOf('turbine') )
+	{
+		this.animationSpeedGoal = 8;
+		if ( list.indexOf('fan') == 0 )
+			this.animationSpeedGoal += 4;
+		if ( list.indexOf('propeller') == 0 )
+			this.animationSpeedGoal += 4;
+		if ( list.indexOf('compressor') == 1 )
+			this.animationSpeedGoal += 8;
 	}
 };
