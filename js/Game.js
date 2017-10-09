@@ -31,191 +31,40 @@ Game.prototype =
 {
 	create: function()
 	{
-		game.stage.backgroundColor = '#ffffff';
-		game.add.tileSprite( 0, 0, game.width, game.height, 'sky' );
+		game.physics.startSystem( Phaser.Physics.ARCADE );
 
+		this.engineLeft = WIDTH * 1/12;
+		this.engineTop = HEIGHT/2;
+		this.engineWidth = this.slot_width.reduce((a, b) => a + b, 0);
 
-		var box = [600, 30, WIDTH-600, 200];
+		this.drawBackground();
 
-		this.cloud = game.add.sprite( box[0] + box[2]/2, box[1] + box[3]/2, 'cloud' );
-		this.cloud.anchor.set( 0.5 );
-		this.cloud.scale.set( 0.5 );
+		this.drawInfoCloud();
 
-		//var bar = game.add.graphics();
-		//bar.beginFill( 0x000000, 0.2 );
-		//bar.drawRect( box[0], box[1], box[2], box[3] );
-		//bar.endFill();
+		this.calculateSlotPositions();
 
-		var padding = 0;
-		this.textPartName = game.add.bitmapText( 0, 0, 'BalsamiqBold', 'Name', 32 );
-		this.textPartName.x = box[0] + padding;
-		this.textPartName.y = box[1] + padding;
+		this.setupSlots();
 
-		var sep = 48;
-		this.textPartDesc = game.add.bitmapText( 0, 0, 'Balsamiq', 'Description', 24 );
-		this.textPartDesc.x = box[0] + padding;
-		this.textPartDesc.y = box[1] + padding + sep;
-		this.textPartDesc.maxWidth = box[2] - 2*padding - sep;
+		this.setupPreview();
 
-		var startLeft = WIDTH * 1/12;
-		var startTop = HEIGHT/2;
-		var width = this.slot_width.reduce((a, b) => a + b, 0);
+		this.setupParts();
 
-		var left = startLeft;
-		var top = startTop;
-		for ( var i = 0; i < this.slots.length; i++ )
-		{
-			this.positions.push( [left, top] );
-			left += this.SCALE * this.slot_width[i];
-		}
+		this.drawSlotNumbers();
 
+		this.setupParticles();
 
-		var x = startLeft + this.SCALE * (width/2 + this.slot_width[0]/5);
-		var y = startTop;
-		var scale = 0.48;
-		this.background = game.add.sprite( x, y, 'bg' );
-		this.background.anchor.set( 0.5, 0.5 );
-		this.background.scale.set( this.SCALE * scale );
-		this.background.alpha = 1.0;
+		this.setupKeyboardInput();
 
-
-		var thick = 15;
-		var bar = game.add.graphics();
-		bar.beginFill( 0x333333, 1.0 );
-		var barLeft = startLeft + this.SCALE * ( this.slot_width[0]/2 - 5 );
-		var barWidth = width - this.slot_width[0]/2 - this.slot_width[this.slots.length-1];
-		bar.drawRect( barLeft, startTop - thick/2, this.SCALE * barWidth, thick );
-		bar.endFill();
-
-
-		for ( var i = 0; i < this.slots.length; i++ )
-		{
-			var p = this.positions[i];
-
-			var box = game.add.graphics();
-			this.slotBg.push( box );
-			box.beginFill( 0x001133, 0.2 );
-			var padding = 10;
-			var left = p[0]+padding;
-			var w = this.slot_width[i]*this.SCALE-2*padding;
-			var topL = p[1]+padding - this.slot_height[i]/2*this.SCALE;
-			var hL = this.slot_height[i+1]*this.SCALE-2*padding;
-			var topR = p[1]+padding - this.slot_height[i+1]/2*this.SCALE;
-			var hR = this.slot_height[i]*this.SCALE-2*padding;
-			var poly = new Phaser.Polygon([
-				new Phaser.Point( left, topL ),
-				new Phaser.Point( left + w, topR ),
-				new Phaser.Point( left + w, topR + hL ),
-				new Phaser.Point( left, topL + hR )
-			]);
-			box.drawPolygon(poly.points);
-			box.endFill();
-
-			var s = game.add.sprite( 0, 0, null );
-			s.addChild( box );
-			s.index = i;
-			s.texture.frame.width = w;
-			s.texture.frame.height = hR;
-			s.anchor.set( -left/w, -topL/hR );
-			s.inputEnabled = true;
-			s.events.onInputDown.add( function(sprite) {
-				this.game.remove( this.game.slots[sprite.index] );
-				this.game.setAtPosition( sprite.index, this.game.previewIndex );
-				this.game.runEngine();
-				//game.add.tween(this).to({
-				//	alpha: 0.8,
-				//}, 200, Phaser.Easing.Exponential.Out, true, 0, 0, true);
-			}, {game: this, sprite: s});
-		}
-
-
-		var preview = game.add.sprite( WIDTH - this.previewSize, HEIGHT - this.previewSize, null );
-
-		var box = game.add.graphics();
-		box.beginFill( 0xffff00, 0.5 );
-		//box.drawRect( 0, 0, this.previewSize, this.previewSize );
-		box.drawCircle( this.previewSize/2, this.previewSize/2, this.previewSize );
-		box.endFill();
-		preview.addChild( box );
-
-		this.previewSprite = game.add.sprite( this.previewSize/2, this.previewSize/2, parts[this.previewIndex], 0 );
-		this.previewSprite.anchor.set( 0.5, 0.5 );
-		this.previewSprite.scale.set( this.previewSize / game.cache.getImage( parts[this.previewIndex] ).height );
-		preview.addChild( this.previewSprite );
-
-		preview.inputEnabled = true;
-		preview.events.onInputDown.add( function() {
-			this.previewIndex = (this.previewIndex + 1) % parts.length;
-			this.previewSprite.loadTexture( parts[this.previewIndex], 0 );
-			this.previewSprite.scale.set( this.previewSize / game.cache.getImage( parts[this.previewIndex] ).height );
-		}, this);
-
-
+		// Bezier curve from newly placed slot. Might remove later.
 		//this.drawLine();
 
-
-		for ( var i = 0; i < parts.length; i++ )
-		{
-			var s = game.add.sprite( 0, 0, parts[i], 0 );
-			this.sprites.push( s );
-			s.scale.set( this.partscale[i] * this.SCALE );
-
-			s.animations.add( 'run', [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18], 20, true );
-			s.animations.play( 'run' );
-
-			this.remove( i );
-		}
-
-		for ( var i = 0; i < this.slots.length; i++ )
-		{
-			var p = this.positions[i];
-
-			var style = { font: "bold 32px Helvetica", fill: "#e54", boundsAlignH: "center", boundsAlignV: "middle" };
-			var t = game.add.text( p[0], p[1] - this.slot_height[i]/2*this.SCALE, i+1, style );
-			t.setShadow( 2, 2, 'rgba(0,0,0,1)', 0 );
-		}
-
-
-		for ( var i = 0; i < 7; i++ )
-			this.keys[i] = [];
-
-		this.keys[0][0] = game.input.keyboard.addKey( Phaser.Keyboard.ONE );
-		this.keys[1][0] = game.input.keyboard.addKey( Phaser.Keyboard.TWO );
-		this.keys[2][0] = game.input.keyboard.addKey( Phaser.Keyboard.THREE );
-		this.keys[3][0] = game.input.keyboard.addKey( Phaser.Keyboard.FOUR );
-		this.keys[4][0] = game.input.keyboard.addKey( Phaser.Keyboard.FIVE );
-
-		this.keys[0][1] = game.input.keyboard.addKey( Phaser.Keyboard.Q );
-		this.keys[1][1] = game.input.keyboard.addKey( Phaser.Keyboard.W );
-		this.keys[2][1] = game.input.keyboard.addKey( Phaser.Keyboard.E );
-		this.keys[3][1] = game.input.keyboard.addKey( Phaser.Keyboard.R );
-		this.keys[4][1] = game.input.keyboard.addKey( Phaser.Keyboard.T );
-		this.keys[5][1] = game.input.keyboard.addKey( Phaser.Keyboard.Y );
-		this.keys[6][1] = game.input.keyboard.addKey( Phaser.Keyboard.U );
-
-
-		particles = game.add.group();
-		particles.createMultiple( 100, 'particle', 0, true );
-
-		for ( var i = 0; i < particles.children.length; i++ )
-		{
-			var s = particles.children[i];
-			s.tint = 0xff0000;
-			s.tint = 0x88ddff//game.rnd.integerInRange( 0, 0xffffff );
-			s.anchor.set( 0.5 );
-			s.scale.set( 0.5 );
-			s.alpha = 0.2;
-			s.position.x = game.rnd.integerInRange( 0, WIDTH );
-			s.position.y = game.rnd.integerInRange( 150, HEIGHT-150 );
-			s.velocity = new Phaser.Point( 4, 0 );
-		}
-
-
+		// Temporary. Remove later.
 		this.setAtPosition( 0, 0 );
 		this.setAtPosition( 1, 2 );
 		this.setAtPosition( 2, 3 );
 		this.setAtPosition( 3, 4 );
 		this.setAtPosition( 4, 5 );
+
 		this.runEngine();
 	},
 
@@ -264,9 +113,9 @@ Game.prototype =
 			}
 		}
 
-		for ( var i = 0; i < particles.children.length; i++ )
+		for ( var i = 0; i < this.particles.children.length; i++ )
 		{
-			var s = particles.children[i];
+			var s = this.particles.children[i];
 			if ( s.alive )
 			{
 				s.position.x += s.velocity.x;
@@ -285,6 +134,195 @@ Game.prototype =
 		this.textPartName.tint = (fac << 0) + (fac << 8) + (fac << 16);
 		this.textPartDesc.tint = (fac << 0) + (fac << 8) + (fac << 16);
 		this.cloud.tint = ((0xff - 0.5*fac << 0) + (0xff - 0.5*fac << 8) + (0xff - 0.5*fac << 16));
+	},
+
+	drawBackground: function()
+	{
+		game.stage.backgroundColor = '#ffffff';
+
+		// Draw background
+		game.add.tileSprite( 0, 0, game.width, game.height, 'sky' );
+
+		// Draw main axis, connecting fan with turbine
+		var thick = 15;
+		var bar = game.add.graphics();
+		bar.beginFill( 0x333333, 1.0 );
+		var barLeft = this.engineLeft + this.SCALE * ( this.slot_width[0]/2 - 5 );
+		var barWidth = this.engineWidth - this.slot_width[0]/2 - this.slot_width[this.slots.length-1];
+		bar.drawRect( barLeft, this.engineTop - thick/2, this.SCALE * barWidth, thick );
+		bar.endFill();
+
+		// Draw engine hull
+		var x = this.engineLeft + this.SCALE * (this.engineWidth/2 + this.slot_width[0]/5);
+		var y = this.engineTop;
+		var scale = 0.48;
+		this.background = game.add.sprite( x, y, 'bg' );
+		this.background.anchor.set( 0.5, 0.5 );
+		this.background.scale.set( this.SCALE * scale );
+		this.background.alpha = 1.0;
+	},
+
+	drawInfoCloud: function()
+	{
+		var box = [600, 30, WIDTH-600, 200];
+
+		// Information cloud, top-right
+		this.cloud = game.add.sprite( box[0] + box[2]/2, box[1] + box[3]/2, 'cloud' );
+		this.cloud.anchor.set( 0.5 );
+		this.cloud.scale.set( 0.5 );
+
+		var padding = 0;
+		this.textPartName = game.add.bitmapText( 0, 0, 'BalsamiqBold', 'Name', 32 );
+		this.textPartName.x = box[0] + padding;
+		this.textPartName.y = box[1] + padding;
+
+		var sep = 48;
+		this.textPartDesc = game.add.bitmapText( 0, 0, 'Balsamiq', 'Description', 24 );
+		this.textPartDesc.x = box[0] + padding;
+		this.textPartDesc.y = box[1] + padding + sep;
+		this.textPartDesc.maxWidth = box[2] - 2*padding - sep;
+	},
+
+	setupSlots: function()
+	{
+		for ( var i = 0; i < this.slots.length; i++ )
+		{
+			var p = this.positions[i];
+
+			var box = game.add.graphics();
+			this.slotBg.push( box );
+			box.beginFill( 0x001133, 0.2 );
+			var padding = 10;
+			var left = p[0]+padding;
+			var w = this.slot_width[i]*this.SCALE-2*padding;
+			var topL = p[1]+padding - this.slot_height[i]/2*this.SCALE;
+			var hL = this.slot_height[i+1]*this.SCALE-2*padding;
+			var topR = p[1]+padding - this.slot_height[i+1]/2*this.SCALE;
+			var hR = this.slot_height[i]*this.SCALE-2*padding;
+			var poly = new Phaser.Polygon([
+				new Phaser.Point( left, topL ),
+				new Phaser.Point( left + w, topR ),
+				new Phaser.Point( left + w, topR + hL ),
+				new Phaser.Point( left, topL + hR )
+			]);
+			box.drawPolygon(poly.points);
+			box.endFill();
+
+			var s = game.add.sprite( 0, 0, null );
+			s.addChild( box );
+			s.index = i;
+			s.texture.frame.width = w;
+			s.texture.frame.height = hR;
+			s.anchor.set( -left/w, -topL/hR );
+			s.inputEnabled = true;
+			s.events.onInputDown.add( function(sprite) {
+				this.game.remove( this.game.slots[sprite.index] );
+				this.game.setAtPosition( sprite.index, this.game.previewIndex );
+				this.game.runEngine();
+			}, {game: this, sprite: s});
+		}
+	},
+
+	calculateSlotPositions: function()
+	{
+		var left = this.engineLeft;
+		var top = this.engineTop;
+		for ( var i = 0; i < this.slots.length; i++ )
+		{
+			this.positions.push( [left, top] );
+			left += this.SCALE * this.slot_width[i];
+		}
+	},
+
+	setupParts: function()
+	{
+		for ( var i = 0; i < parts.length; i++ )
+		{
+			var s = game.add.sprite( 0, 0, parts[i], 0 );
+			this.sprites.push( s );
+			s.scale.set( this.partscale[i] * this.SCALE );
+
+
+			s.animations.add( 'run', [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18], 20, true );
+			s.animations.play( 'run' );
+
+			this.remove( i );
+		}
+	},
+
+	drawSlotNumbers: function()
+	{
+		for ( var i = 0; i < this.slots.length; i++ )
+		{
+			var p = this.positions[i];
+
+			var style = { font: "bold 32px Helvetica", fill: "#e54", boundsAlignH: "center", boundsAlignV: "middle" };
+			var t = game.add.text( p[0], p[1] - this.slot_height[i]/2*this.SCALE, i+1, style );
+			t.setShadow( 2, 2, 'rgba(0,0,0,1)', 0 );
+		}
+	},
+
+	setupPreview: function()
+	{
+		var preview = game.add.sprite( WIDTH - this.previewSize, HEIGHT - this.previewSize, null );
+
+		var box = game.add.graphics();
+		box.beginFill( 0xffff00, 0.5 );
+		//box.drawRect( 0, 0, this.previewSize, this.previewSize );
+		box.drawCircle( this.previewSize/2, this.previewSize/2, this.previewSize );
+		box.endFill();
+		preview.addChild( box );
+
+		this.previewSprite = game.add.sprite( this.previewSize/2, this.previewSize/2, parts[this.previewIndex], 0 );
+		this.previewSprite.anchor.set( 0.5, 0.5 );
+		this.previewSprite.scale.set( this.previewSize / game.cache.getImage( parts[this.previewIndex] ).height );
+		preview.addChild( this.previewSprite );
+
+		preview.inputEnabled = true;
+		preview.events.onInputDown.add( function() {
+			this.previewIndex = (this.previewIndex + 1) % parts.length;
+			this.previewSprite.loadTexture( parts[this.previewIndex], 0 );
+			this.previewSprite.scale.set( this.previewSize / game.cache.getImage( parts[this.previewIndex] ).height );
+		}, this);
+	},
+
+	setupParticles: function()
+	{
+		this.particles = game.add.group();
+		this.particles.createMultiple( 200, 'particle', 0, true );
+
+		for ( var i = 0; i < this.particles.children.length; i++ )
+		{
+			var s = this.particles.children[i];
+			s.tint = 0xff0000;
+			s.tint = 0x88ddff;
+			s.anchor.set( 0.5 );
+			s.scale.set( 0.5 );
+			s.alpha = 0.2;
+			s.position.x = game.rnd.integerInRange( 0, WIDTH );
+			s.position.y = game.rnd.integerInRange( 150, HEIGHT-150 );
+			s.velocity = new Phaser.Point( 4, 0 );
+		}
+	},
+
+	setupKeyboardInput: function()
+	{
+		for ( var i = 0; i < 7; i++ )
+		this.keys[i] = [];
+
+		this.keys[0][0] = game.input.keyboard.addKey( Phaser.Keyboard.ONE );
+		this.keys[1][0] = game.input.keyboard.addKey( Phaser.Keyboard.TWO );
+		this.keys[2][0] = game.input.keyboard.addKey( Phaser.Keyboard.THREE );
+		this.keys[3][0] = game.input.keyboard.addKey( Phaser.Keyboard.FOUR );
+		this.keys[4][0] = game.input.keyboard.addKey( Phaser.Keyboard.FIVE );
+
+		this.keys[0][1] = game.input.keyboard.addKey( Phaser.Keyboard.Q );
+		this.keys[1][1] = game.input.keyboard.addKey( Phaser.Keyboard.W );
+		this.keys[2][1] = game.input.keyboard.addKey( Phaser.Keyboard.E );
+		this.keys[3][1] = game.input.keyboard.addKey( Phaser.Keyboard.R );
+		this.keys[4][1] = game.input.keyboard.addKey( Phaser.Keyboard.T );
+		this.keys[5][1] = game.input.keyboard.addKey( Phaser.Keyboard.Y );
+		this.keys[6][1] = game.input.keyboard.addKey( Phaser.Keyboard.U );
 	},
 };
 
