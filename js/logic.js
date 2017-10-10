@@ -62,16 +62,16 @@ function findFinishedEngine( pps )
 	{
 		return [
 			"ENGINE",
-			"\nTurbojetmotor",
-			"De första jetmotorerna som uppfanns var turbojetmotorer och fanns bland annat i den tyska flygplansmodellen Henkel He 178 år 1939.\nDet hade en maxhastighet på 598 km/h, så att flyga mellan Linköping och Stockholm med det planet skulle ta cirka 20 minuter. Samma sträcka skulle ta ungefär 2 timmar att resa med bil.",
+			"Grattis! Du har byggt\nen turbojetmotor!",
+			"De första jetmotorerna som uppfanns var turbojetmotorer och fanns bland annat i den tyska flygplansmodellen Henkel He 178 år 1939.Det hade en maxhastighet på 598 km/h, så att flyga mellan Linköping och Stockholm med det planet skulle ta cirka 20 minuter. Samma sträcka skulle ta ungefär 2 timmar att resa med bil.",
 		];
 	}
 	if ( compareEngine( pps, [0,2,3,4,5] ) )
 	{
 		return [
 			"ENGINE",
-			"\nTurbofläktmotor",
-			"De första jetmotorerna som uppfanns var turbojetmotorer och fanns bland annat i den tyska flygplansmodellen Henkel He 178 år 1939.\nDet hade en maxhastighet på 598 km/h, så att flyga mellan Linköping och Stockholm med det planet skulle ta cirka 20 minuter. Samma sträcka skulle ta ungefär 2 timmar att resa med bil.",
+			"Grattis! Du har byggt\nen turbofläktmotor!",
+			"Turbofläktmotorer är lika jetmotorer men har även en fläkt som suger in luft i motorn. Eftersom mycket av luften inte passerar genom motorns kompressor skapas en större drivkraft utan att förbruka lika mycket bränsle som andra motorer. Turbofläktmotorer används i de flesta större trafikflygplan som exempelvis Boeing 747 som kan nå hastigheter av 920 km/h. Att resa mellan Linköping och Stockholm med det planet skulle bara ta cirka 14 minuter. Samma resa med bil tar ungefär 2 timmar.",
 		];
 	}
 	if ( compareEngine( pps, [1,2,3,4,5] ) )
@@ -83,18 +83,9 @@ function findFinishedEngine( pps )
 		];
 	}
 
-	if ( pps.length == 0 )
-	{
-		return [
-			"INFO",
-			"\nHoppsan! Den delen kan inte monteras där!",
-			"Prova att montera delen på en annan plats.",
-		];
-	}
-
 	return [
 		"ERROR",
-		"\nHoppsan! Den delen kan inte monteras där!",
+		"Hoppsan! Den delen kan inte monteras där!",
 		"Prova att montera delen på en annan plats.",
 	];
 }
@@ -102,7 +93,12 @@ function findFinishedEngine( pps )
 function simulate( pps, airflow=1.0, hot=false )
 {
 	if ( pps.length <= 0 )
+	{
+		if ( !hot )
+			throw ["INFO", "För att motorn ska få någon kraft behövs även en del som blandar bränsle med luften och antänder den."];
 		return;
+	}
+
 	var part = pps.shift();
 
 	if ( part == 0 ) // fan
@@ -118,13 +114,13 @@ function simulate( pps, airflow=1.0, hot=false )
 	if ( part == 3 ) // combustor
 	{
 		hot = true;
-		if ( airflow >= 1.0 )
-			throw 'Combustion engine requires compressed air.';
+		//if ( airflow >= 1.0 )
+		//	throw 'Combustion engine requires compressed air.';
 	}
 	if ( part == 4 ) // turbine
 	{
-		if ( airflow >= 1.0 )
-			throw 'Turbine requires compressed air.';
+		//if ( airflow >= 1.0 )
+		//	throw 'Turbine requires compressed air.';
 		airflow *= 2
 	}
 	if ( part == 5 ) // nozzle
@@ -154,9 +150,9 @@ function isValid( input, unique )
 {
 	// Filters physical limitations (when a user places a piece that shouldn't fit or cheating the RFID.)
 	input.forEach(function(slot) {
-		if ( slot )
+		if ( slot != null )
 			if ( partData[parts[slot]]['allowed'].indexOf( input.indexOf(slot)+1 ) == -1 )
-				throw 'Invalid placement.';
+				throw ["ERROR", "Hoppsan!", "Den här motordelen kan inte monteras där. Prova att sätta den på en annan plats."];
 	});
 	validCount += 1
 

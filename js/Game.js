@@ -165,13 +165,15 @@ Game.prototype =
 
 	drawInfo: function()
 	{
-		var box = [610, 10, WIDTH-610, 200];
+		var box = [610, 10, WIDTH-610, 64];
 
-		// Information cloud, top-right
-		//this.cloud = game.add.sprite( box[0] + box[2]/2, box[1] + box[3]/2, 'cloud' );
-
-		this.icon = game.add.sprite( box[0] - 80, box[1] + 30, 'info' );
+		this.icon = game.add.sprite( box[0] - 80, box[1], 'info' );
 		this.icon.scale.set( 0.12 );
+
+		//var bar = game.add.graphics();
+		//bar.beginFill( 0x000000, 0.2 );
+		//bar.drawRect( box[0], box[1], box[2], box[3] );
+		//bar.endFill();
 
 		var padding = 10;
 		this.textPartName = game.add.bitmapText( 0, 0, 'BalsamiqBold', 'Name', 32 );
@@ -179,18 +181,30 @@ Game.prototype =
 		this.textPartName.y = box[1] + padding;
 		this.textPartName.tint = 0x000000;
 
-		var sep = 80;
+
+		var box = [610, 260, WIDTH-610, 300];
+
+		//var bar = game.add.graphics();
+		//bar.beginFill( 0x000000, 0.2 );
+		//bar.drawRect( box[0], box[1], box[2], box[3] );
+		//bar.endFill();
+
 		this.textPartDesc = game.add.bitmapText( 0, 0, 'Balsamiq', 'Description', 20 );
 		this.textPartDesc.x = box[0] + padding;
-		this.textPartDesc.y = box[1] + padding + sep;
+		this.textPartDesc.y = box[1] + padding;
 		this.textPartDesc.maxWidth = box[2] - 2*padding;
 		this.textPartDesc.tint = 0x000000;
 
 
-		var box = [610, 450, WIDTH-610, 200];
+		var box = [610, 100, WIDTH-610, 100];
 
 		this.brain = game.add.sprite( box[0] - 80, box[1], 'brain' );
 		this.brain.scale.set( 0.48 );
+
+		//var bar = game.add.graphics();
+		//bar.beginFill( 0x000000, 0.2 );
+		//bar.drawRect( box[0], box[1], box[2], box[3] );
+		//bar.endFill();
 
 		this.brainText = game.add.bitmapText( 0, 0, 'Balsamiq', 'Description', 20 );
 		this.brainText.x = box[0] + padding;
@@ -341,7 +355,7 @@ Game.prototype =
 			s.alpha = 0.2;
 			s.position.x = game.rnd.integerInRange( 0, WIDTH );
 			s.position.y = game.rnd.integerInRange( 130, HEIGHT-130 );
-			s.startVelocity = new Phaser.Point( 3+Math.random(), 0 );
+			s.startVelocity = new Phaser.Point( 1.5+0.5*Math.random(), 0 );
 			s.velocity = new Phaser.Point( s.startVelocity.x, s.startVelocity.y );
 
 			s.lastSlot = -1;
@@ -378,10 +392,11 @@ Game.prototype =
 				game.physics.arcade.overlap( s, this.slotSprites[j], function( s, slot ) {
 					s.lastSlot = j;
 
+					var speedFac = 3;
 					var p = parts[this.slots[j]];
 					if ( p == 'fan' || p == 'propeller' )
 					{
-						var speed = 350;
+						var speed = 350 * speedFac;
 						var fac = 1.0 - 0.1 * scale;
 						var pFac = 1.0 - 0.5 * scale;
 						game.add.tween( s.position ).to({ y: this.engineTop + (s.position.y - this.engineTop)*pFac }, speed, Phaser.Easing.Circular.InOut, true );
@@ -391,7 +406,7 @@ Game.prototype =
 					}
 					else if ( p == 'compressor' )
 					{
-						var speed = 600;
+						var speed = 600 * speedFac;
 						var fac = 1.0 - 0.4 * scale;
 						var pFac = 1.0 - 0.66 * scale;
 						game.add.tween( s.position ).to({ y: this.engineTop + (s.position.y - this.engineTop)*pFac }, speed, Phaser.Easing.Circular.InOut, true );
@@ -401,14 +416,14 @@ Game.prototype =
 					}
 					else if ( p == 'combustor' )
 					{
-						var speed = 250;
+						var speed = 250 * speedFac;
 						var fac = 5.3;
 						game.add.tween( s.velocity ).to({ x: s.velocity.x * fac }, speed, Phaser.Easing.Circular.In, true );
 						this.tweenTint( s, s.tint, 0xff0000, speed );
 					}
-					else if ( p == 'turbine' && s.velocity.x > 10 )
+					else if ( p == 'turbine' && s.velocity.x > 4 )
 					{
-						var speed = 150;
+						var speed = 150 * speedFac;
 						var fac = 1.0 - 0.3 * scale;
 						var pFac = 1.0 + 2.0 * scale;
 						game.add.tween( s.position ).to({ y: this.engineTop + (s.position.y - this.engineTop)*pFac }, speed, Phaser.Easing.Circular.InOut, true );
@@ -418,7 +433,7 @@ Game.prototype =
 					}
 					else if ( p == 'nozzle' )
 					{
-						var speed = 300;
+						var speed = 300 * speedFac;
 						var pFac = 1.0 - 0.23 * scale;
 						game.add.tween( s.position ).to({ y: this.engineTop + (s.position.y - this.engineTop)*pFac }, speed, Phaser.Easing.Circular.InOut, true );
 						//game.add.tween( s.scale ).to({ x: fac, y: fac }, speed, Phaser.Easing.Circular.InOut, true );
@@ -426,7 +441,7 @@ Game.prototype =
 					}
 					else if ( p == 'afterburner' )
 					{
-						var speed = 300;
+						var speed = 300 * speedFac;
 						var fac = 4;
 						game.add.tween( s.velocity ).to({ x: s.velocity.x * fac }, speed, Phaser.Easing.Circular.In, true );
 						//game.add.tween( s.position ).to({ y: this.engineTop + (s.position.y - this.engineTop)*2 }, speed, Phaser.Easing.Circular.InOut, true );
@@ -584,10 +599,27 @@ Game.prototype.runEngine = function () {
 	var success = result[0];
 	var text = result[1];
 
-	if ( !success )
+	if ( getClean( this.slots ).length == 0 )
 	{
-		this.textPartName.text = "*suck*";
-		this.textPartDesc.text = text;
+		this.icon.loadTexture( null );
+		this.textPartName.text = "";
+		this.textPartDesc.text = "";
+		this.brainText.text = "Placera en motordel i något av hålen.";
+	}
+	else if ( !success )
+	{
+		if ( text[0] == 'ERROR' )
+		{
+			this.icon.loadTexture( 'error' );
+			this.textPartName.text = text[1];
+			this.brainText.text = text[2];
+			this.textPartDesc.text = "";
+		}
+		else if ( text[0] == 'INFO' )
+		{
+			this.icon.loadTexture( null );
+			this.brainText.text = text[1];
+		}
 	}
 	else
 	{
@@ -596,20 +628,20 @@ Game.prototype.runEngine = function () {
 
 		if ( type == 'ERROR' )
 		{
-			this.icon.loadTexture( 'error', 0 );
+			this.icon.loadTexture( 'error' );
 			this.textPartDesc.text = "Propellern suger in luft i motorn. För att göra motorn mer effektiv behövs även en motordel som pressar samman luften.";
 		}
 		else if ( type == 'ENGINE' )
 		{
-			this.icon.loadTexture( 'check', 0 );
+			this.icon.loadTexture( 'check' );
 			this.textPartName.text = t[1];
 			this.textPartDesc.text = t[2];
 			this.brainText.text = "Det finns fortfarande fler motorer att bygga. Prova till exempel att byta ut propellern mot en annan motordel.";
 			//"Det finns fortfarande fler motorer att bygga. Du kan göra motorn mer effektiv genom att lägga till en motordel som suger in luft i motorn."
 		}
-		else if ( type == 'ENGINE' )
+		else if ( type == 'INFO' )
 		{
-			this.icon.loadTexture( 'info', 0 );
+			this.icon.loadTexture( 'info' );
 			this.textPartName.text = t[1];
 			this.textPartDesc.text = t[2];
 		}
