@@ -63,7 +63,7 @@ function findFinishedEngine( pps )
 		return [
 			"ENGINE",
 			"Grattis! Du har byggt\nen turbojetmotor!",
-			"De första jetmotorerna som uppfanns var turbojetmotorer och fanns bland annat i den tyska flygplansmodellen Henkel He 178 år 1939.Det hade en maxhastighet på 598 km/h, så att flyga mellan Linköping och Stockholm med det planet skulle ta cirka 20 minuter. Samma sträcka skulle ta ungefär 2 timmar att resa med bil.",
+			"De första jetmotorerna som uppfanns var turbojetmotorer och fanns bland annat i den tyska flygplansmodellen Henkel He 178 år 1939.Det hade en maxhastighet på 598 km/h, så att flyga mellan Linköping och Stockholm med det planet skulle ta cirka 20 minuter.",
 		];
 	}
 	if ( compareEngine( pps, [0,2,3,4,5] ) )
@@ -71,7 +71,7 @@ function findFinishedEngine( pps )
 		return [
 			"ENGINE",
 			"Grattis! Du har byggt\nen turbofläktmotor!",
-			"Turbofläktmotorer är lika jetmotorer men har även en fläkt som suger in luft i motorn. Eftersom mycket av luften inte passerar genom motorns kompressor skapas en större drivkraft utan att förbruka lika mycket bränsle som andra motorer. Turbofläktmotorer används i de flesta större trafikflygplan som exempelvis Boeing 747 som kan nå hastigheter av 920 km/h. Att resa mellan Linköping och Stockholm med det planet skulle bara ta cirka 14 minuter. Samma resa med bil tar ungefär 2 timmar.",
+			"Turbofläktmotorer används i de flesta större trafikflygplan som exempelvis Boeing 747 som kan nå hastigheter av 920 km/h. Att resa mellan Linköping och Stockholm med det planet skulle bara ta cirka 14 minuter. Samma resa med bil tar ungefär 2 timmar.",
 		];
 	}
 	if ( compareEngine( pps, [1,2,3,4,5] ) )
@@ -79,23 +79,38 @@ function findFinishedEngine( pps )
 		return [
 			"ENGINE",
 			"Grattis! Du har byggt\nen turbopropmotor!",
-			"Turbopropmotorer är lika turbojetmotorer men har även en propeller monterad i fram som suger in luft i motorn. Turbopropmotorer använder mycket bränsle men är också väldigt kraftfulla och tillförlitliga. De används ofta i mindre trafikflygplan som ATR 72 som kan flyga i hastigheter runt 500 km/h. Att flyga från Linköping till Stockholm i ett sådant plan skulle ta cirka 24 min. Att färdas samma sträcka med bil tar ungefär 2 timmar.",
+			"Turbopropmotorer används ofta i mindre trafikflygplan som ATR 72 som kan flyga i hastigheter runt 500 km/h. Att flyga från Linköping till Stockholm i ett sådant plan skulle ta cirka 24 min. Att färdas samma sträcka med bil tar ungefär 2 timmar.",
+		];
+	}
+
+	if ( pps.length == 5 )
+	{
+		return [
+			"INFO",
+			"Grattis!",
+			"",
+			"Du har en fungerande motor! Efterbrännkammaren ger motorn extra kraft, men förbrukar mycket bränsle.",
 		];
 	}
 
 	return [
-		"ERROR",
-		"Hoppsan! Den delen kan inte monteras där!",
-		"Prova att montera delen på en annan plats.",
+		"INFO",
+		"På god väg!",
+		"",
+		"Du har en fungerande motor, men det går att förbättra.",
 	];
 }
 
-function simulate( pps, airflow=1.0, hot=false )
+function simulate( pps, airflow=1.0, hot=false, loud=false )
 {
 	if ( pps.length <= 0 )
 	{
 		if ( !hot )
-			throw ["INFO", "För att motorn ska få någon kraft behövs även en del som blandar bränsle med luften och antänder den."];
+			throw ["INFO", "Motorn saknar kraft", "För att motorn ska få någon kraft behövs även en del som blandar bränsle med luften och antänder den."];
+		if ( airflow < 1.0 )
+			throw ["INFO", "Saknar drivkraft", "För att driva kompressorn behövs mekanisk kraft som får den att snurra. Du kan omvandla den varma luftströmmen till rotation med en turbin."];
+		if ( loud )
+			throw ["INFO", "Nästan färdig", "Motorn saknar ett avgasrör som riktar luften. Motorn är dessutom väldigt högljudd."];
 		return;
 	}
 
@@ -114,8 +129,9 @@ function simulate( pps, airflow=1.0, hot=false )
 	if ( part == 3 ) // combustor
 	{
 		hot = true;
-		//if ( airflow >= 1.0 )
-		//	throw 'Combustion engine requires compressed air.';
+		loud = true;
+		if ( airflow >= 1.0 )
+			throw ["INFO", "Ineffektiv förbränning", "Mycket av luften går inte in i förbränningskammaren, vilket är ineffektivt. Du måste komprimera luften innan förbränningskammaren för att skapa mer kraft!"];
 	}
 	if ( part == 4 ) // turbine
 	{
@@ -125,12 +141,14 @@ function simulate( pps, airflow=1.0, hot=false )
 	}
 	if ( part == 5 ) // nozzle
 	{
+		loud = false;
 	}
 	if ( part == 6 ) // burn
 	{
 		hot = true;
+		loud = false;
 	}
-	simulate( pps, airflow, hot );
+	simulate( pps, airflow, hot, loud );
 }
 
 function getClean( input )

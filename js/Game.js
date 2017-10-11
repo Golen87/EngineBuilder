@@ -16,7 +16,7 @@ var Game = function()
 
 	this.previewIndex = 0;
 	this.previewSprite = null;
-	this.previewSize = 50;
+	this.previewSize = 0;
 
 	this.partscale = [0.14, 0.3, 0.16, 0.10, 0.16, 0.15, 0.15];
 	this.partWidth = [212, 73, 553, 802, 553, 409, 610];
@@ -26,7 +26,7 @@ var Game = function()
 	this.slot_width = [56, 80, 80, 80, 80];
 	this.slot_height = [80+30, 80, 80, 80, 80, 80-30];
 	this.slot_anchor = [1.0, 0.5, 0.5, 0.5, 0.0];
-	this.part_body_height = [250, 250, 110, 30, 50, 110, 110];
+	this.part_body_height = [250, 250, 110, 30, 50, 110, 130];
 	this.SCALE = 1.5;
 
 	this.NOPOWER = 2;
@@ -61,6 +61,8 @@ Game.prototype =
 		this.setupParticles();
 
 		this.setupKeyboardInput();
+
+		this.setupAudio();
 
 		// Bezier curve from newly placed slot. Might remove later.
 		//this.drawLine();
@@ -112,11 +114,12 @@ Game.prototype =
 				if ( this.selected == null )
 				{
 					this.setAsPreview( i );
+					this.runEngine();
 				}
 				else if ( this.selected == i )
 				{
 					this.remove( this.selected );
-					this.selected = null;
+					//this.selected = null;
 					this.runEngine();
 				}
 				else
@@ -128,6 +131,8 @@ Game.prototype =
 			}
 
 			this.sprites[i].frame = this.animationFrame;
+			if ( this.sprites[i].tint != 0xffffff )
+				this.sprites[i].tint = Math.round(game.time.totalElapsedSeconds()*6)%2==0 ? 0xff0000 : 0xff7777;
 		}
 
 		this.updateParticles();
@@ -158,7 +163,7 @@ Game.prototype =
 		this.cloud = game.add.sprite( 200, 50, 'cloud' );
 		this.cloud.anchor.set( 0.5 );
 		this.cloud.scale.set( 0.5 );
-		this.cloud2 = game.add.sprite( 900, 500, 'cloud' );
+		this.cloud2 = game.add.sprite( 750, 600, 'cloud' );
 		this.cloud2.anchor.set( 0.5 );
 		this.cloud2.scale.set( 0.5 );
 	},
@@ -179,7 +184,7 @@ Game.prototype =
 		this.textPartName = game.add.bitmapText( 0, 0, 'BalsamiqBold', 'Name', 32 );
 		this.textPartName.x = box[0] + padding;
 		this.textPartName.y = box[1] + padding;
-		this.textPartName.tint = 0x000000;
+		//this.textPartName.tint = 0x000000;
 
 
 		var box = [610, 260, WIDTH-610, 300];
@@ -193,7 +198,7 @@ Game.prototype =
 		this.textPartDesc.x = box[0] + padding;
 		this.textPartDesc.y = box[1] + padding;
 		this.textPartDesc.maxWidth = box[2] - 2*padding;
-		this.textPartDesc.tint = 0x000000;
+		//this.textPartDesc.tint = 0x000000;
 
 
 		var box = [610, 100, WIDTH-610, 100];
@@ -210,7 +215,7 @@ Game.prototype =
 		this.brainText.x = box[0] + padding;
 		this.brainText.y = box[1] + padding;
 		this.brainText.maxWidth = box[2] - 2*padding;
-		this.brainText.tint = 0x000000;
+		//this.brainText.tint = 0x000000;
 	},
 
 	drawEngineHull: function()
@@ -342,7 +347,7 @@ Game.prototype =
 	setupParticles: function()
 	{
 		this.particles = game.add.group();
-		this.particles.createMultiple( 400, 'particle', 0, true );
+		this.particles.createMultiple( 500, 'particle', 0, true );
 
 		for ( var i = 0; i < this.particles.children.length; i++ )
 		{
@@ -387,7 +392,7 @@ Game.prototype =
 				{
 					if ( s.lastSlot == j )
 						continue;
-					var scale = this.animationSpeed / this.POWER;
+					var scale = (this.POWER + this.animationSpeed)/2 / this.POWER;
 
 				game.physics.arcade.overlap( s, this.slotSprites[j], function( s, slot ) {
 					s.lastSlot = j;
@@ -402,7 +407,8 @@ Game.prototype =
 						game.add.tween( s.position ).to({ y: this.engineTop + (s.position.y - this.engineTop)*pFac }, speed, Phaser.Easing.Circular.InOut, true );
 						game.add.tween( s.velocity ).to({ x: s.velocity.x * fac }, speed, Phaser.Easing.Circular.InOut, true );
 						//game.add.tween( s.scale ).to({ x: s.scale.x*fac, y: s.scale.y*fac }, speed, Phaser.Easing.Circular.InOut, true );
-						//this.tweenTint( s, s.tint, 0x55ff77, speed );
+						var color = Phaser.Color.interpolateColor( s.tint, 0x8899ff, this.POWER, this.animationSpeed);
+						this.tweenTint( s, s.tint, color, speed );
 					}
 					else if ( p == 'compressor' )
 					{
@@ -412,14 +418,15 @@ Game.prototype =
 						game.add.tween( s.position ).to({ y: this.engineTop + (s.position.y - this.engineTop)*pFac }, speed, Phaser.Easing.Circular.InOut, true );
 						game.add.tween( s.velocity ).to({ x: s.velocity.x * fac }, speed, Phaser.Easing.Circular.InOut, true );
 						//game.add.tween( s.scale ).to({ x: fac, y: fac }, speed, Phaser.Easing.Circular.InOut, true );
-						//this.tweenTint( s, s.tint, 0xccff11, speed );
+						var color = Phaser.Color.interpolateColor( s.tint, 0xdd88ff, this.POWER, this.animationSpeed);
+						this.tweenTint( s, s.tint, color, speed );
 					}
 					else if ( p == 'combustor' )
 					{
 						var speed = 250 * speedFac;
 						var fac = 5.3;
 						game.add.tween( s.velocity ).to({ x: s.velocity.x * fac }, speed, Phaser.Easing.Circular.In, true );
-						this.tweenTint( s, s.tint, 0xff0000, speed );
+						this.tweenTint( s, s.tint, 0xff1111, speed );
 					}
 					else if ( p == 'turbine' && s.velocity.x > 4 )
 					{
@@ -429,24 +436,27 @@ Game.prototype =
 						game.add.tween( s.position ).to({ y: this.engineTop + (s.position.y - this.engineTop)*pFac }, speed, Phaser.Easing.Circular.InOut, true );
 						game.add.tween( s.velocity ).to({ x: s.velocity.x * fac }, speed, Phaser.Easing.Circular.InOut, true );
 						//game.add.tween( s.scale ).to({ x: fac, y: fac }, speed, Phaser.Easing.Circular.InOut, true );
-						this.tweenTint( s, s.tint, 0xffff00, speed );
+						var color = Phaser.Color.interpolateColor( s.tint, 0xffff00, this.POWER, this.animationSpeed);
+						this.tweenTint( s, s.tint, color, speed );
 					}
 					else if ( p == 'nozzle' )
 					{
 						var speed = 300 * speedFac;
-						var pFac = 1.0 - 0.23 * scale;
+						var pFac = 1.0 - 0.3 * scale;
 						game.add.tween( s.position ).to({ y: this.engineTop + (s.position.y - this.engineTop)*pFac }, speed, Phaser.Easing.Circular.InOut, true );
 						//game.add.tween( s.scale ).to({ x: fac, y: fac }, speed, Phaser.Easing.Circular.InOut, true );
 						//this.tweenTint( s, s.tint, 0x0000ff, speed );
+						var color = Phaser.Color.interpolateColor( s.tint, 0xddff88, this.POWER, this.animationSpeed);
+						this.tweenTint( s, s.tint, color, speed );
 					}
 					else if ( p == 'afterburner' )
 					{
-						var speed = 300 * speedFac;
+						var speed = 200 * speedFac;
 						var fac = 4;
 						game.add.tween( s.velocity ).to({ x: s.velocity.x * fac }, speed, Phaser.Easing.Circular.In, true );
 						//game.add.tween( s.position ).to({ y: this.engineTop + (s.position.y - this.engineTop)*2 }, speed, Phaser.Easing.Circular.InOut, true );
 						//game.add.tween( s.scale ).to({ x: fac, y: fac }, speed, Phaser.Easing.Circular.InOut, true );
-						this.tweenTint( s, s.tint, 0xff0000, speed );
+						this.tweenTint( s, s.tint, 0xff1111, speed );
 					}
 				}, null, this );
 
@@ -473,6 +483,12 @@ Game.prototype =
 		this.keys[4][1] = game.input.keyboard.addKey( Phaser.Keyboard.T );
 		this.keys[5][1] = game.input.keyboard.addKey( Phaser.Keyboard.Y );
 		this.keys[6][1] = game.input.keyboard.addKey( Phaser.Keyboard.U );
+	},
+
+	setupAudio: function()
+	{
+		this.right = game.add.audio( 'right' );
+		this.wrong = game.add.audio( 'wrong' );
 	},
 };
 
@@ -533,6 +549,7 @@ Game.prototype.setAtPosition = function ( p, s )
 	this.sprites[s].position.x = this.positions[p][0] + this.SCALE * ( padding + ( this.slot_width[p] - 2*padding ) * anchor );
 	this.sprites[s].position.y = this.positions[p][1];
 	this.sprites[s].scale.set( this.partscale[s] * this.SCALE );
+	game.add.tween( this.sprites[s].scale ).from({ x: this.sprites[s].scale.x*1.5, y: this.sprites[s].scale.y*1.5 }, 500, Phaser.Easing.Cubic.In, true );
 	this.sprites[s].anchor.set( anchor, 0.5 );
 
 	if ( this.slots.indexOf( s ) > -1 )
@@ -594,6 +611,12 @@ Game.prototype.bezierPoint = function (p0, p1, p2, p3, t) {
 	return {x: x, y: y};	
 };
 
+Game.prototype.setText = function ( name, desc, brain ) {
+	this.textPartName.text = name;
+	this.textPartDesc.text = desc;
+	this.brainText.text = brain;
+};
+
 Game.prototype.runEngine = function () {
 	var result = tryInput( this.slots );
 	var success = result[0];
@@ -602,23 +625,20 @@ Game.prototype.runEngine = function () {
 	if ( getClean( this.slots ).length == 0 )
 	{
 		this.icon.loadTexture( null );
-		this.textPartName.text = "";
-		this.textPartDesc.text = "";
-		this.brainText.text = "Placera en motordel i något av hålen.";
+		this.setText( "", "", "Placera en motordel i något av hålen." );
 	}
 	else if ( !success )
 	{
 		if ( text[0] == 'ERROR' )
 		{
+			this.wrong.play();
 			this.icon.loadTexture( 'error' );
-			this.textPartName.text = text[1];
-			this.brainText.text = text[2];
-			this.textPartDesc.text = "";
+			this.setText( text[1], "", text[2] );
 		}
 		else if ( text[0] == 'INFO' )
 		{
-			this.icon.loadTexture( null );
-			this.brainText.text = text[1];
+			this.icon.loadTexture( 'info' );
+			this.setText( text[1], "", text[2] );
 		}
 	}
 	else
@@ -628,22 +648,21 @@ Game.prototype.runEngine = function () {
 
 		if ( type == 'ERROR' )
 		{
+			this.wrong.play();
 			this.icon.loadTexture( 'error' );
-			this.textPartDesc.text = "Propellern suger in luft i motorn. För att göra motorn mer effektiv behövs även en motordel som pressar samman luften.";
+			this.setText( t[1], t[2], "Det verkar fungera, men jag känner inte igen motorn." );
+			//this.textPartDesc.text = "Propellern suger in luft i motorn. För att göra motorn mer effektiv behövs även en motordel som pressar samman luften.";
 		}
 		else if ( type == 'ENGINE' )
 		{
+			this.right.play();
 			this.icon.loadTexture( 'check' );
-			this.textPartName.text = t[1];
-			this.textPartDesc.text = t[2];
-			this.brainText.text = "Det finns fortfarande fler motorer att bygga. Prova till exempel att byta ut propellern mot en annan motordel.";
-			//"Det finns fortfarande fler motorer att bygga. Du kan göra motorn mer effektiv genom att lägga till en motordel som suger in luft i motorn."
+			this.setText( t[1], t[2], "Det finns fortfarande fler motorer att bygga. Prova till exempel att byta ut propellern mot en annan motordel." );
 		}
 		else if ( type == 'INFO' )
 		{
-			this.icon.loadTexture( 'info' );
-			this.textPartName.text = t[1];
-			this.textPartDesc.text = t[2];
+			this.icon.loadTexture( 'check' );
+			this.setText( t[1], t[2], t[3] );
 		}
 	}
 };

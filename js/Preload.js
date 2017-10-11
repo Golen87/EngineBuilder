@@ -30,6 +30,9 @@ Preload.prototype = {
 
 		game.load.image( 'particle', 'images/particle.png' );
 
+		game.load.audio( 'right', 'sounds/right.ogg' );
+		game.load.audio( 'wrong', 'sounds/wrong.ogg' );
+
 
 		// Loading percentage text
 		//this.progress = this.game.add.text(this.game.world.centerX, this.game.world.centerY-30, '0%', {fill: 'white'});
